@@ -128,8 +128,8 @@
           siteDiv.innerHTML = `<div class="error">Error loading data: ${err.message}</div>`;
           console.error(`Error loading data for ${site.name}:`, err);
         }
-        // Wait 2 seconds before next request to avoid rate limiting
-        await delay(5000);
+        // Wait 15 seconds before next request to avoid rate limiting
+        await delay(15000);
       }
 
       chartInitCalls.forEach(fn => fn());
