@@ -78,6 +78,11 @@
       });
     }
 
+    // Helper function to pause for ms milliseconds
+    function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
     async function render() {
       const contentDiv = document.getElementById('content');
       contentDiv.innerHTML = 'Loading data...';
@@ -123,6 +128,8 @@
           siteDiv.innerHTML = `<div class="error">Error loading data: ${err.message}</div>`;
           console.error(`Error loading data for ${site.name}:`, err);
         }
+        // Wait 2 seconds before next request to avoid rate limiting
+        await delay(2000);
       }
 
       chartInitCalls.forEach(fn => fn());
