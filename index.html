@@ -51,10 +51,7 @@
       <h3>Battery Percentage</h3>
       <canvas id="batteryChart"></canvas>
     </div>
-    <div class="chart-wrapper" id="other-sensors-wrapper" style="display:none;">
-      <h3>Other Sensors</h3>
-      <canvas id="otherSensorsChart"></canvas>
-    </div>
+    <div id="other-sensors-charts"></div>
   </div>
 
   <!-- Chart.js -->
@@ -70,7 +67,7 @@
       const proxyUrl = "https://zentra-proxy.onrender.com/zentra";
 
       let batteryChart = null;
-      let otherSensorsChart = null;
+      let otherSensorCharts = {};
 
       function parseDateTime(datetimeStr) {
         return new Date(datetimeStr);
@@ -89,12 +86,20 @@
         const loadingElem = document.getElementById("charts-loading");
         const errorElem = document.getElementById("charts-error");
         const batteryWrapper = document.getElementById("battery-chart-wrapper");
-        const otherWrapper = document.getElementById("other-sensors-wrapper");
+        const otherSensorsChartsDiv = document.getElementById("other-sensors-charts");
 
         loadingElem.style.display = "block";
         errorElem.style.display = "none";
         batteryWrapper.style.display = "none";
-        otherWrapper.style.display = "none";
+        otherSensorsChartsDiv.innerHTML = "";
+
+        // Destroy old charts if any
+        if (batteryChart) {
+          batteryChart.destroy();
+          batteryChart = null;
+        }
+        Object.values(otherSensorCharts).forEach(chart => chart.destroy && chart.destroy());
+        otherSensorCharts = {};
 
         try {
           const data = await fetchSensorReadings();
@@ -111,21 +116,83 @@
             const batteryValues = batteryReadings.map(r => r.value);
 
             const batteryCtx = document.getElementById("batteryChart").getContext("2d");
-            if (batteryChart) {
-              batteryChart.data.labels = batteryLabels;
-              batteryChart.data.datasets[0].data = batteryValues;
-              batteryChart.update();
-            } else {
-              batteryChart = new Chart(batteryCtx, {
+            batteryChart = new Chart(batteryCtx, {
+              type: "line",
+              data: {
+                labels: batteryLabels,
+                datasets: [{
+                  label: "Battery Percentage (%)",
+                  data: batteryValues,
+                  fill: false,
+                  borderColor: "rgba(75, 192, 192, 1)",
+                  backgroundColor: "rgba(75, 192, 192, 0.2)",
+                  tension: 0.1,
+                  pointRadius: 2,
+                  pointHoverRadius: 5,
+                }]
+              },
+              options: {
+                responsive: true,
+                scales: {
+                  x: {
+                    type: "time",
+                    time: {
+                      tooltipFormat: "PPpp",
+                      unit: "hour",
+                      displayFormats: { hour: "MMM d, HH:mm" }
+                    },
+                    title: { display: true, text: "Timestamp" }
+                  },
+                  y: {
+                    beginAtZero: true,
+                    max: 100,
+                    title: { display: true, text: "Battery Percentage (%)" }
+                  }
+                },
+                plugins: {
+                  legend: { display: true },
+                  tooltip: { mode: "index", intersect: false }
+                }
+              }
+            });
+            batteryWrapper.style.display = "block";
+          }
+
+          // Other sensors: one chart per sensor
+          const otherSensorNames = Object.keys(data).filter(name => name !== "Battery Percent");
+          if (otherSensorNames.length > 0) {
+            otherSensorNames.forEach((sensorName, idx) => {
+              const sensorData = data[sensorName][0];
+              if (!sensorData?.readings) return;
+
+              const readings = sensorData.readings;
+              const labels = readings.map(r => parseDateTime(r.datetime));
+              const values = readings.map(r => r.value);
+              const units = sensorData.metadata?.units || "";
+
+              // Create wrapper div and canvas
+              const wrapper = document.createElement("div");
+              wrapper.className = "chart-wrapper";
+              const title = document.createElement("h3");
+              title.textContent = `${sensorName}${units ? " (" + units + ")" : ""}`;
+              const canvas = document.createElement("canvas");
+              canvas.id = `sensorChart_${idx}`;
+              wrapper.appendChild(title);
+              wrapper.appendChild(canvas);
+              otherSensorsChartsDiv.appendChild(wrapper);
+
+              // Create chart
+              const ctx = canvas.getContext("2d");
+              otherSensorCharts[sensorName] = new Chart(ctx, {
                 type: "line",
                 data: {
-                  labels: batteryLabels,
+                  labels: labels,
                   datasets: [{
-                    label: "Battery Percentage (%)",
-                    data: batteryValues,
+                    label: sensorName + (units ? ` (${units})` : ""),
+                    data: values,
                     fill: false,
-                    borderColor: "rgba(75, 192, 192, 1)",
-                    backgroundColor: "rgba(75, 192, 192, 0.2)",
+                    borderColor: "rgba(54, 162, 235, 1)",
+                    backgroundColor: "rgba(54, 162, 235, 0.2)",
                     tension: 0.1,
                     pointRadius: 2,
                     pointHoverRadius: 5,
@@ -144,9 +211,8 @@
                       title: { display: true, text: "Timestamp" }
                     },
                     y: {
-                      beginAtZero: true,
-                      max: 100,
-                      title: { display: true, text: "Battery Percentage (%)" }
+                      beginAtZero: false,
+                      title: { display: true, text: units ? units : "Value" }
                     }
                   },
                   plugins: {
@@ -155,122 +221,7 @@
                   }
                 }
               });
-            }
-            batteryWrapper.style.display = "block";
-          }
-
-          // Other sensors chart
-          const otherSensorNames = Object.keys(data).filter(name => name !== "Battery Percent");
-          if (otherSensorNames.length > 0) {
-            // Collect all timestamps from all sensors
-            const allTimestampsSet = new Set();
-            otherSensorNames.forEach(sensorName => {
-              const readings = data[sensorName][0]?.readings || [];
-              readings.forEach(r => allTimestampsSet.add(r.datetime));
             });
-            const allTimestamps = Array.from(allTimestampsSet)
-              .map(dt => parseDateTime(dt))
-              .sort((a, b) => a - b);
-
-            // For each sensor, create a map datetime->value
-            const sensorDataMaps = {};
-            otherSensorNames.forEach(sensorName => {
-              const readings = data[sensorName][0]?.readings || [];
-              const map = new Map();
-              readings.forEach(r => {
-                map.set(r.datetime, r.value);
-              });
-              sensorDataMaps[sensorName] = {
-                map,
-                units: data[sensorName][0]?.metadata?.units || "",
-              };
-            });
-
-            // Build datasets for Chart.js
-            const colors = [
-              "rgba(255, 99, 132, 1)",
-              "rgba(54, 162, 235, 1)",
-              "rgba(255, 206, 86, 1)",
-              "rgba(75, 192, 192, 1)",
-              "rgba(153, 102, 255, 1)",
-              "rgba(255, 159, 64, 1)",
-              "rgba(199, 199, 199, 1)",
-            ];
-
-            const datasets = otherSensorNames.map((sensorName, idx) => {
-              const sensorMap = sensorDataMaps[sensorName].map;
-              const units = sensorDataMaps[sensorName].units;
-              const dataPoints = allTimestamps.map(dt => {
-                // Helper to format date to "YYYY-MM-DD HH:mm:ss±HH:mm"
-                function pad(n) { return n < 10 ? "0" + n : n; }
-                function formatDateWithOffset(date) {
-                  const year = date.getFullYear();
-                  const month = pad(date.getMonth() + 1);
-                  const day = pad(date.getDate());
-                  const hours = pad(date.getHours());
-                  const minutes = pad(date.getMinutes());
-                  const seconds = pad(date.getSeconds());
-                  const offsetMinutes = date.getTimezoneOffset();
-                  const offsetSign = offsetMinutes > 0 ? "-" : "+";
-                  const offsetH = pad(Math.floor(Math.abs(offsetMinutes) / 60));
-                  const offsetM = pad(Math.abs(offsetMinutes) % 60);
-                  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}${offsetSign}${offsetH}:${offsetM}`;
-                }
-                const key = formatDateWithOffset(dt);
-                const val = sensorMap.get(key);
-                return val !== undefined ? val : null;
-              });
-
-              return {
-                label: sensorName + (units ? ` (${units})` : ""),
-                data: dataPoints,
-                borderColor: colors[idx % colors.length],
-                backgroundColor: colors[idx % colors.length].replace("1)", "0.2)"),
-                fill: false,
-                tension: 0.1,
-                spanGaps: true,
-                pointRadius: 2,
-                pointHoverRadius: 5,
-              };
-            });
-
-            const otherCtx = document.getElementById("otherSensorsChart").getContext("2d");
-            if (otherSensorsChart) {
-              otherSensorsChart.data.labels = allTimestamps;
-              otherSensorsChart.data.datasets = datasets;
-              otherSensorsChart.update();
-            } else {
-              otherSensorsChart = new Chart(otherCtx, {
-                type: "line",
-                data: {
-                  labels: allTimestamps,
-                  datasets: datasets,
-                },
-                options: {
-                  responsive: true,
-                  scales: {
-                    x: {
-                      type: "time",
-                      time: {
-                        tooltipFormat: "PPpp",
-                        unit: "hour",
-                        displayFormats: { hour: "MMM d, HH:mm" }
-                      },
-                      title: { display: true, text: "Timestamp" }
-                    },
-                    y: {
-                      beginAtZero: false,
-                      title: { display: true, text: "Sensor Values" }
-                    }
-                  },
-                  plugins: {
-                    legend: { display: true, position: "top" },
-                    tooltip: { mode: "index", intersect: false }
-                  }
-                }
-              });
-            }
-            otherWrapper.style.display = "block";
           }
 
           loadingElem.style.display = "none";
