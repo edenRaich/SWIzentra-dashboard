@@ -2,96 +2,49 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Zentra Sensor Dashboard</title>
+  <title>Zentra Multi-Site Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background: #f9f9f9;
-    }
-    .site-container {
-      margin-bottom: 50px;
-      padding: 15px;
-      background: #fff;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-    h2.site-name {
-      margin-bottom: 20px;
-      border-bottom: 2px solid #007bff;
-      padding-bottom: 5px;
-      color: #007bff;
-    }
-    .sensor-chart-container {
-      margin-bottom: 40px;
-    }
-    .sensor-label {
-      font-weight: bold;
-      margin-bottom: 8px;
-      color: #333;
-    }
-    canvas {
-      max-width: 700px;
-      width: 100%;
-      height: 300px;
-    }
-    .error-message {
-      color: red;
-      font-style: italic;
-      margin-top: 10px;
-    }
+    body { font-family: Arial, sans-serif; margin: 40px; }
+    h2 { margin-top: 40px; }
+    .sensor-section { margin-bottom: 60px; }
+    .sensor-title { font-size: 1.1em; margin-bottom: 10px; }
+    canvas { max-width: 700px; }
+    .site-section { margin-bottom: 80px; }
+    .error { color: red; }
   </style>
 </head>
 <body>
-  <h1>Zentra Sensor Dashboard</h1>
-  <div id="dashboard"></div>
-
+  <h1>Zentra Multi-Site Sensor Dashboard</h1>
+  <div id="content">Loading data...</div>
   <script>
     const sites = [
-      { name: "Murphy Cemetery", device_sn: "z6-33251" },
-      { name: "Nibble Fish Corner", device_sn: "z6-32482" },
-      { name: "B&K Styron Yard", device_sn: "z6-32414" }
+      { name: 'Murphy Cemetery', device_sn: 'z6-33251' },
+      { name: 'Nibble Fish Corner', device_sn: 'z6-32482' },
+      { name: 'B&K Styron Yard', device_sn: 'z6-32414' }
     ];
-
-    const baseUrl = "https://zentra-proxy.onrender.com/zentra";
-
-    // Utility to create DOM elements with classes and text
-    function createElement(tag, className, text) {
-      const el = document.createElement(tag);
-      if (className) el.className = className;
-      if (text) el.textContent = text;
-      return el;
-    }
-
-    // Format timestamps for Chart.js time scale
-    function parseDateTime(datetimeStr) {
-      // Date string is expected in ISO 8601 or similar format
-      return new Date(datetimeStr);
-    }
+    const baseUrl = 'https://zentra-proxy.onrender.com/zentra';
 
     async function fetchSiteData(device_sn) {
-      const url = `${baseUrl}?device_sn=${encodeURIComponent(device_sn)}`;
+      const url = `${baseUrl}?device_sn=${device_sn}`;
       const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`HTTP error ${response.status}`);
-      }
-      const json = await response.json();
-      return json.data;
+      if (!response.ok) throw new Error(`Failed to fetch data for ${device_sn}: ${response.statusText}`);
+      return response.json();
     }
 
-    function createChart(ctx, sensorLabel, readings) {
-      const labels = readings.map(r => parseDateTime(r.datetime));
-      const dataPoints = readings.map(r => r.value);
-
-      return new Chart(ctx, {
+    function createChart(canvasId, readings, sensorName, units) {
+      const ctx = document.getElementById(canvasId).getContext('2d');
+      const sortedReadings = [...readings].sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+      const labels = sortedReadings.map(r => r.datetime);
+      const data = sortedReadings.map(r => r.value);
+      new Chart(ctx, {
         type: 'line',
         data: {
           labels: labels,
           datasets: [{
-            label: sensorLabel,
-            data: dataPoints,
+            label: `${sensorName}${units ? ' (' + units + ')' : ''}`,
+            data: data,
             fill: false,
             borderColor: 'rgba(75, 192, 192, 1)',
             backgroundColor: 'rgba(75, 192, 192, 0.2)',
@@ -102,95 +55,80 @@
         },
         options: {
           responsive: true,
+          plugins: {
+            legend: { display: true },
+            tooltip: { mode: 'index', intersect: false }
+          },
           scales: {
             x: {
               type: 'time',
               time: {
-                tooltipFormat: 'MMM d, yyyy HH:mm',
-                unit: 'hour',
-                displayFormats: {
-                  hour: 'MMM d, HH:mm'
-                }
+                tooltipFormat: 'PPpp',
+                unit: 'minute',
+                displayFormats: { minute: 'MMM d, HH:mm' }
               },
-              title: {
-                display: true,
-                text: 'Timestamp'
-              }
+              title: { display: true, text: 'Timestamp' }
             },
             y: {
               beginAtZero: true,
-              title: {
-                display: true,
-                text: 'Value'
-              }
-            }
-          },
-          plugins: {
-            legend: {
-              display: true
-            },
-            tooltip: {
-              mode: 'index',
-              intersect: false
+              title: { display: true, text: units || 'Value' }
             }
           }
         }
       });
     }
 
-    async function loadDashboard() {
-      const dashboard = document.getElementById('dashboard');
+    async function render() {
+      const contentDiv = document.getElementById('content');
+      contentDiv.innerHTML = 'Loading data...';
+
+      let html = '';
+      const chartInitCalls = [];
 
       for (const site of sites) {
-        const siteContainer = createElement('div', 'site-container');
-        const siteHeading = createElement('h2', 'site-name', site.name);
-        siteContainer.appendChild(siteHeading);
+        html += `<div class="site-section"><h2>${site.name}</h2><div id="site_${site.device_sn}">Loading...</div></div>`;
+      }
+      contentDiv.innerHTML = html;
 
+      for (const site of sites) {
+        const siteDiv = document.getElementById(`site_${site.device_sn}`);
         try {
           const data = await fetchSiteData(site.device_sn);
-
-          if (!data || Object.keys(data).length === 0) {
-            const noDataMsg = createElement('p', 'error-message', 'No sensor data available.');
-            siteContainer.appendChild(noDataMsg);
-            dashboard.appendChild(siteContainer);
+          if (!data || !data.data) {
+            siteDiv.innerHTML = '<div class="error">No sensor data available.</div>';
             continue;
           }
+          const sensors = data.data;
+          let siteHtml = '';
+          Object.keys(sensors).forEach((sensorKey, idx) => {
+            if (!Array.isArray(sensors[sensorKey])) return;
+            sensors[sensorKey].forEach((sensor, j) => {
+              const readings = sensor.readings || [];
+              if (readings.length === 0) return;
+              const sensorName = sensor.metadata?.sensor_name || sensorKey;
+              const units = sensor.metadata?.units || '';
+              const canvasId = `chart_${site.device_sn}_${sensorKey}_${idx}_${j}`;
 
-          // For each sensor in the site data
-          for (const sensorName in data) {
-            if (!data.hasOwnProperty(sensorName)) continue;
-            const sensorArray = data[sensorName];
-            if (!Array.isArray(sensorArray) || sensorArray.length === 0) continue;
+              siteHtml += `<div class="sensor-section">
+                <div class="sensor-title">${sensorName}${units ? ' (' + units + ')' : ''}</div>
+                <canvas id="${canvasId}" height="250"></canvas>
+              </div>`;
 
-            // Each sensorArray is an array of sensor objects; each has metadata and readings
-            for (const sensorObj of sensorArray) {
-              const sensorLabel = sensorObj.metadata?.sensor_name || sensorName;
-              const readings = sensorObj.readings || [];
+              chartInitCalls.push(() => createChart(canvasId, readings, sensorName, units));
+            });
+          });
 
-              if (readings.length === 0) continue;
-
-              const sensorContainer = createElement('div', 'sensor-chart-container');
-              const labelEl = createElement('div', 'sensor-label', sensorLabel);
-              sensorContainer.appendChild(labelEl);
-
-              const canvas = document.createElement('canvas');
-              sensorContainer.appendChild(canvas);
-
-              siteContainer.appendChild(sensorContainer);
-
-              createChart(canvas.getContext('2d'), sensorLabel, readings);
-            }
-          }
-        } catch (error) {
-          const errorMsg = createElement('p', 'error-message', `Failed to load data: ${error.message}`);
-          siteContainer.appendChild(errorMsg);
+          siteDiv.innerHTML = siteHtml || '<div class="error">No sensor readings found.</div>';
+        } catch (err) {
+          siteDiv.innerHTML = `<div class="error">Error loading data: ${err.message}</div>`;
+          console.error(`Error loading data for ${site.name}:`, err);
         }
-
-        dashboard.appendChild(siteContainer);
       }
+
+      chartInitCalls.forEach(fn => fn());
     }
 
-    window.addEventListener('load', loadDashboard);
+    render();
   </script>
 </body>
 </html>
