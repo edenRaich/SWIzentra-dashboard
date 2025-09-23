@@ -2,118 +2,483 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Zentra Dashboard – Nibble Fish Corner</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Device Sensor Dashboard - Nibble Fish Corner</title>
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-sA+e2F4k6k6bZ6v7v+0Q+6k6k6k6k6k6k6k6k6k6k6k="
+    crossorigin=""
+  />
+
   <style>
-    body { font-family: Arial, sans-serif; margin: 40px; }
-    h2 { margin-top: 40px; }
-    .sensor-section { margin-bottom: 60px; }
-    .sensor-title { font-size: 1.1em; margin-bottom: 10px; }
-    canvas { max-width: 700px; }
-    .error { color: red; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      background: #f9f9f9;
+    }
+
+    #map {
+      height: 400px;
+      width: 100%;
+      max-width: 900px;
+      margin: 20px auto 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    #popup-content {
+      font-size: 14px;
+      max-width: 250px;
+    }
+
+    #summary-loading,
+    #summary-error {
+      font-style: italic;
+      color: #666;
+      padding: 6px 0;
+    }
+
+    #charts-container {
+      max-width: 900px;
+      margin: 0 auto 40px;
+      padding: 0 10px;
+      background: white;
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
+    }
+
+    .chart-wrapper {
+      margin: 30px 0;
+    }
+
+    canvas {
+      width: 100% !important;
+      height: 300px !important;
+    }
+
+    #charts-loading,
+    #charts-error {
+      text-align: center;
+      font-style: italic;
+      color: #666;
+      padding: 20px 0;
+    }
   </style>
 </head>
 <body>
-  <h1>Zentra Sensor Dashboard: Nibble Fish Corner</h1>
-  <div id="content">Loading data...</div>
+  <h2 style="text-align:center; margin-top: 20px;">Device Sensor Dashboard: Nibble Fish Corner</h2>
+
+  <div id="map" aria-label="Map showing device location"></div>
+
+  <div id="charts-container" aria-live="polite" aria-busy="false">
+    <div id="charts-loading">Loading sensor charts...</div>
+    <div id="charts-error" style="display:none; color: red;"></div>
+
+    <div class="chart-wrapper" id="battery-chart-wrapper" style="display:none;">
+      <h3>Battery Percentage</h3>
+      <canvas id="batteryChart"></canvas>
+    </div>
+
+    <div class="chart-wrapper" id="other-sensors-wrapper" style="display:none;">
+      <h3>Other Sensors</h3>
+      <canvas id="otherSensorsChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-o9N1j6k6k6k6k6k6k6k6k6k6k6k6k6k6k6k6k6k6k6k="
+    crossorigin=""
+  ></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
+  <!-- Chart.js date adapter -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@2.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+
   <script>
-    const site = { name: 'Nibble Fish Corner', device_sn: 'z6-32482' };
-    const baseUrl = 'https://zentra-proxy.onrender.com/zentra';
+    (function () {
+      const device = {
+        name: "Nibble Fish Corner",
+        device_sn: "z6-32482",
+        lat: 34.7855122,
+        lon: -76.4655264,
+      };
+      const proxyUrl = "https://zentra-proxy.onrender.com/zentra";
 
-    async function fetchSiteData(device_sn) {
-      const url = `${baseUrl}?device_sn=${device_sn}`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`Failed to fetch data for ${device_sn}: ${response.statusText}`);
-      return response.json();
-    }
+      // Initialize Leaflet map
+      const map = L.map("map").setView([device.lat, device.lon], 13);
 
-    function createChart(canvasId, readings, sensorName, units) {
-      const ctx = document.getElementById(canvasId).getContext('2d');
-      const sortedReadings = [...readings].sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
-      const labels = sortedReadings.map(r => r.datetime);
-      const data = sortedReadings.map(r => r.value);
-      new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: `${sensorName}${units ? ' (' + units + ')' : ''}`,
-            data: data,
-            fill: false,
-            borderColor: 'rgba(75, 192, 192, 1)',
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            tension: 0.1,
-            pointRadius: 2,
-            pointHoverRadius: 5,
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { display: true },
-            tooltip: { mode: 'index', intersect: false }
-          },
-          scales: {
-            x: {
-              type: 'time',
-              time: {
-                tooltipFormat: 'PPpp',
-                unit: 'minute',
-                displayFormats: { minute: 'MMM d, HH:mm' }
-              },
-              title: { display: true, text: 'Timestamp' }
-            },
-            y: {
-              beginAtZero: true,
-              title: { display: true, text: units || 'Value' }
-            }
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      }).addTo(map);
+
+      // Marker with popup placeholder
+      const marker = L.marker([device.lat, device.lon]).addTo(map);
+
+      // Popup content container
+      const popupContent = document.createElement("div");
+      popupContent.id = "popup-content";
+      popupContent.innerHTML = `<div><strong>${device.name}</strong></div><div id="summary-loading">Loading latest sensor readings...</div>`;
+
+      marker.bindPopup(popupContent);
+
+      // Function to fetch sensor readings from proxy
+      async function fetchSensorReadings() {
+        try {
+          const response = await fetch(
+            `${proxyUrl}/get_readings/?device_sn=${encodeURIComponent(
+              device.device_sn
+            )}`
+          );
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
           }
+          const json = await response.json();
+          return json.data || {};
+        } catch (error) {
+          throw error;
         }
-      });
-    }
-
-    async function render() {
-      const contentDiv = document.getElementById('content');
-      contentDiv.innerHTML = 'Loading data...';
-
-      try {
-        const data = await fetchSiteData(site.device_sn);
-        if (!data || !data.data) {
-          contentDiv.innerHTML = '<div class="error">No sensor data available.</div>';
-          return;
-        }
-        const sensors = data.data;
-        let html = `<h2>${site.name}</h2>`;
-        const chartInitCalls = [];
-
-        Object.keys(sensors).forEach((sensorKey, idx) => {
-          if (!Array.isArray(sensors[sensorKey])) return;
-          sensors[sensorKey].forEach((sensor, j) => {
-            const readings = sensor.readings || [];
-            if (readings.length === 0) return;
-            const sensorName = sensor.metadata?.sensor_name || sensorKey;
-            const units = sensor.metadata?.units || '';
-            const canvasId = `chart_${site.device_sn}_${sensorKey}_${idx}_${j}`;
-
-            html += `<div class="sensor-section">
-              <div class="sensor-title">${sensorName}${units ? ' (' + units + ')' : ''}</div>
-              <canvas id="${canvasId}" height="250"></canvas>
-            </div>`;
-
-            chartInitCalls.push(() => createChart(canvasId, readings, sensorName, units));
-          });
-        });
-
-        contentDiv.innerHTML = html || '<div class="error">No sensor readings found.</div>';
-        chartInitCalls.forEach(fn => fn());
-      } catch (err) {
-        contentDiv.innerHTML = `<div class="error">Error loading data: ${err.message}</div>`;
-        console.error(`Error loading data for ${site.name}:`, err);
       }
-    }
 
-    render();
+      // Function to get latest reading from readings array
+      function getLatestReading(readings) {
+        if (!Array.isArray(readings) || readings.length === 0) return null;
+        // Assuming readings are sorted by datetime ascending or descending?
+        // We'll pick the reading with the max mrid (most recent)
+        return readings.reduce((latest, current) =>
+          current.mrid > (latest?.mrid || 0) ? current : latest
+        );
+      }
+
+      // Show latest sensor readings summary in popup
+      async function showPopupSummary() {
+        const loadingElem = popupContent.querySelector("#summary-loading");
+        if (loadingElem) loadingElem.textContent = "Loading latest sensor readings...";
+        try {
+          const data = await fetchSensorReadings();
+
+          // Clear previous content except device name
+          popupContent.innerHTML = `<div><strong>${device.name}</strong></div>`;
+
+          if (!data || Object.keys(data).length === 0) {
+            popupContent.innerHTML +=
+              '<div>No sensor data available for this device.</div>';
+            return;
+          }
+
+          const summaryList = document.createElement("ul");
+          summaryList.style.paddingLeft = "18px";
+          summaryList.style.marginTop = "6px";
+
+          for (const sensorName in data) {
+            const sensorData = data[sensorName];
+            if (!sensorData || !sensorData[0]?.readings) continue;
+
+            const latest = getLatestReading(sensorData[0].readings);
+            if (!latest) continue;
+
+            const units = sensorData[0].metadata?.units || "";
+            const valueDisplay =
+              latest.value !== null && latest.value !== undefined
+                ? `${latest.value}${units}`
+                : "N/A";
+
+            const li = document.createElement("li");
+            li.textContent = `${sensorName}: ${valueDisplay}`;
+            summaryList.appendChild(li);
+          }
+
+          popupContent.appendChild(summaryList);
+        } catch (error) {
+          popupContent.innerHTML = `<div><strong>${device.name}</strong></div><div style="color:red;">Error loading sensor data.</div>`;
+          console.error("Error fetching sensor readings for popup:", error);
+        }
+      }
+
+      // Attach popup open event to fetch and show summary
+      marker.on("popupopen", () => {
+        showPopupSummary();
+      });
+
+      // Chart.js charts variables
+      let batteryChart = null;
+      let otherSensorsChart = null;
+
+      // Utility: parse datetime string to Date object safely
+      function parseDateTime(datetimeStr) {
+        // ISO 8601 with offset is expected, Date constructor can parse it
+        return new Date(datetimeStr);
+      }
+
+      // Prepare and render charts below map
+      async function renderCharts() {
+        const loadingElem = document.getElementById("charts-loading");
+        const errorElem = document.getElementById("charts-error");
+        const batteryWrapper = document.getElementById("battery-chart-wrapper");
+        const otherWrapper = document.getElementById("other-sensors-wrapper");
+
+        loadingElem.style.display = "block";
+        errorElem.style.display = "none";
+        batteryWrapper.style.display = "none";
+        otherWrapper.style.display = "none";
+
+        try {
+          const data = await fetchSensorReadings();
+
+          if (!data || Object.keys(data).length === 0) {
+            throw new Error("No sensor data available.");
+          }
+
+          // Prepare battery percentage chart data
+          const batterySensor = data["Battery Percent"];
+          if (!batterySensor || !batterySensor[0]?.readings) {
+            throw new Error("Battery Percent sensor data missing.");
+          }
+
+          const batteryReadings = batterySensor[0].readings;
+          const batteryLabels = batteryReadings.map((r) => parseDateTime(r.datetime));
+          const batteryValues = batteryReadings.map((r) => r.value);
+
+          // Create or update battery chart
+          const batteryCtx = document.getElementById("batteryChart").getContext("2d");
+          if (batteryChart) {
+            batteryChart.data.labels = batteryLabels;
+            batteryChart.data.datasets[0].data = batteryValues;
+            batteryChart.update();
+          } else {
+            batteryChart = new Chart(batteryCtx, {
+              type: "line",
+              data: {
+                labels: batteryLabels,
+                datasets: [
+                  {
+                    label: "Battery Percentage (%)",
+                    data: batteryValues,
+                    fill: false,
+                    borderColor: "rgba(75, 192, 192, 1)",
+                    backgroundColor: "rgba(75, 192, 192, 0.2)",
+                    tension: 0.1,
+                    pointRadius: 2,
+                    pointHoverRadius: 5,
+                  },
+                ],
+              },
+              options: {
+                responsive: true,
+                scales: {
+                  x: {
+                    type: "time",
+                    time: {
+                      tooltipFormat: "PPpp",
+                      unit: "hour",
+                      displayFormats: {
+                        hour: "MMM d, HH:mm",
+                      },
+                    },
+                    title: {
+                      display: true,
+                      text: "Timestamp",
+                    },
+                  },
+                  y: {
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                      display: true,
+                      text: "Battery Percentage (%)",
+                    },
+                  },
+                },
+                plugins: {
+                  legend: {
+                    display: true,
+                  },
+                  tooltip: {
+                    mode: "index",
+                    intersect: false,
+                  },
+                },
+              },
+            });
+          }
+
+          batteryWrapper.style.display = "block";
+
+          // Prepare other sensors chart data (excluding Battery Percent)
+          const otherSensorNames = Object.keys(data).filter(
+            (name) => name !== "Battery Percent"
+          );
+
+          if (otherSensorNames.length === 0) {
+            otherWrapper.style.display = "none";
+            loadingElem.style.display = "none";
+            return;
+          }
+
+          // For each sensor, prepare dataset with latest readings over time
+          // We'll plot all sensors on one line chart with time on x-axis
+          // We assume readings have datetime and value
+
+          // Collect all timestamps from all sensors to create a unified timeline
+          const allTimestampsSet = new Set();
+          otherSensorNames.forEach((sensorName) => {
+            const readings = data[sensorName][0]?.readings || [];
+            readings.forEach((r) => allTimestampsSet.add(r.datetime));
+          });
+          const allTimestamps = Array.from(allTimestampsSet)
+            .map((dt) => parseDateTime(dt))
+            .sort((a, b) => a - b);
+
+          // For each sensor, create a map datetime->value for quick lookup
+          const sensorDataMaps = {};
+          otherSensorNames.forEach((sensorName) => {
+            const readings = data[sensorName][0]?.readings || [];
+            const map = new Map();
+            readings.forEach((r) => {
+              map.set(r.datetime, r.value);
+            });
+            sensorDataMaps[sensorName] = {
+              map,
+              units: data[sensorName][0]?.metadata?.units || "",
+            };
+          });
+
+          // Build datasets for Chart.js
+          const colors = [
+            "rgba(255, 99, 132, 1)",
+            "rgba(54, 162, 235, 1)",
+            "rgba(255, 206, 86, 1)",
+            "rgba(75, 192, 192, 1)",
+            "rgba(153, 102, 255, 1)",
+            "rgba(255, 159, 64, 1)",
+            "rgba(199, 199, 199, 1)",
+          ];
+
+          const datasets = otherSensorNames.map((sensorName, idx) => {
+            const sensorMap = sensorDataMaps[sensorName].map;
+            const units = sensorDataMaps[sensorName].units;
+            const dataPoints = allTimestamps.map((dt) => {
+              // Format datetime string to match keys in map
+              // We use ISO string without milliseconds and with offset if possible
+              // But original keys are in "YYYY-MM-DD HH:mm:ss-04:00" format
+              // We'll try to find closest match by string conversion:
+              // We'll convert dt to "YYYY-MM-DD HH:mm:ss±HH:mm" format
+
+              // Helper to format date to "YYYY-MM-DD HH:mm:ss±HH:mm"
+              function formatDateWithOffset(date) {
+                const pad = (n) => (n < 10 ? "0" + n : n);
+                const year = date.getFullYear();
+                const month = pad(date.getMonth() + 1);
+                const day = pad(date.getDate());
+                const hours = pad(date.getHours());
+                const minutes = pad(date.getMinutes());
+                const seconds = pad(date.getSeconds());
+
+                const offsetMinutes = date.getTimezoneOffset();
+                const offsetSign = offsetMinutes > 0 ? "-" : "+";
+                const offsetH = pad(Math.floor(Math.abs(offsetMinutes) / 60));
+                const offsetM = pad(Math.abs(offsetMinutes) % 60);
+
+                return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}${offsetSign}${offsetH}:${offsetM}`;
+              }
+
+              const key = formatDateWithOffset(dt);
+              const val = sensorMap.get(key);
+              return val !== undefined ? val : null;
+            });
+
+            return {
+              label: sensorName + (units ? ` (${units})` : ""),
+              data: dataPoints,
+              borderColor: colors[idx % colors.length],
+              backgroundColor: colors[idx % colors.length].replace("1)", "0.2)"),
+              fill: false,
+              tension: 0.1,
+              spanGaps: true,
+              pointRadius: 2,
+              pointHoverRadius: 5,
+            };
+          });
+
+          // Create or update other sensors chart
+          const otherCtx = document
+            .getElementById("otherSensorsChart")
+            .getContext("2d");
+          if (otherSensorsChart) {
+            otherSensorsChart.data.labels = allTimestamps;
+            otherSensorsChart.data.datasets = datasets;
+            otherSensorsChart.update();
+          } else {
+            otherSensorsChart = new Chart(otherCtx, {
+              type: "line",
+              data: {
+                labels: allTimestamps,
+                datasets: datasets,
+              },
+              options: {
+                responsive: true,
+                scales: {
+                  x: {
+                    type: "time",
+                    time: {
+                      tooltipFormat: "PPpp",
+                      unit: "hour",
+                      displayFormats: {
+                        hour: "MMM d, HH:mm",
+                      },
+                    },
+                    title: {
+                      display: true,
+                      text: "Timestamp",
+                    },
+                  },
+                  y: {
+                    beginAtZero: false,
+                    title: {
+                      display: true,
+                      text: "Sensor Values",
+                    },
+                  },
+                },
+                plugins: {
+                  legend: {
+                    display: true,
+                    position: "top",
+                  },
+                  tooltip: {
+                    mode: "index",
+                    intersect: false,
+                  },
+                },
+              },
+            });
+          }
+
+          otherWrapper.style.display = "block";
+          loadingElem.style.display = "none";
+        } catch (error) {
+          loadingElem.style.display = "none";
+          errorElem.style.display = "block";
+          errorElem.textContent =
+            "Error loading sensor charts: " + error.message || error;
+          console.error("Error rendering charts:", error);
+        }
+      }
+
+      // Initial render of charts on page load
+      renderCharts();
+    })();
   </script>
 </body>
 </html>
