@@ -129,7 +129,7 @@
           console.error(`Error loading data for ${site.name}:`, err);
         }
         // Wait 2 seconds before next request to avoid rate limiting
-        await delay(2000);
+        await delay(5000);
       }
 
       chartInitCalls.forEach(fn => fn());
