@@ -22,7 +22,7 @@
   <div id="content">Loading data...</div>
   <script>
     async function fetchZentraData() {
-      const url = 'http://localhost:3000/zentra';
+      const url = 'https://zentra-proxy.onrender.com';
       const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch data: ' + response.status + ' ' + response.statusText);
       return response.json();
