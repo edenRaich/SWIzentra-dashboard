@@ -5,12 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Device Sensor Dashboard - Nibble Fish Corner</title>
 
-  <!-- Leaflet CSS -->
+  <!-- Leaflet CSS (no integrity/crossorigin) -->
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-sA+e2F4k6k6bZ6v7v+0Q+6k6k6k6k6k6k6k6k6k6k6k="
-    crossorigin=""
   />
 
   <style>
@@ -92,11 +90,9 @@
     </div>
   </div>
 
-  <!-- Leaflet JS -->
+  <!-- Leaflet JS (no integrity/crossorigin) -->
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-o9N1j6k6k6k6k6k6k6k6k6k6k6k6k6k6k6k6k6k6k6k="
-    crossorigin=""
   ></script>
 
   <!-- Chart.js -->
@@ -154,7 +150,6 @@
       // Function to get latest reading from readings array
       function getLatestReading(readings) {
         if (!Array.isArray(readings) || readings.length === 0) return null;
-        // Assuming readings are sorted by datetime ascending or descending?
         // We'll pick the reading with the max mrid (most recent)
         return readings.reduce((latest, current) =>
           current.mrid > (latest?.mrid || 0) ? current : latest
@@ -369,15 +364,9 @@
             const sensorMap = sensorDataMaps[sensorName].map;
             const units = sensorDataMaps[sensorName].units;
             const dataPoints = allTimestamps.map((dt) => {
-              // Format datetime string to match keys in map
-              // We use ISO string without milliseconds and with offset if possible
-              // But original keys are in "YYYY-MM-DD HH:mm:ss-04:00" format
-              // We'll try to find closest match by string conversion:
-              // We'll convert dt to "YYYY-MM-DD HH:mm:ss±HH:mm" format
-
               // Helper to format date to "YYYY-MM-DD HH:mm:ss±HH:mm"
+              function pad(n) { return n < 10 ? "0" + n : n; }
               function formatDateWithOffset(date) {
-                const pad = (n) => (n < 10 ? "0" + n : n);
                 const year = date.getFullYear();
                 const month = pad(date.getMonth() + 1);
                 const day = pad(date.getDate());
