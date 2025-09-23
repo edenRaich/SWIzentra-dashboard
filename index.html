@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Zentra Multi-Site Dashboard</title>
+  <title>Zentra Dashboard – Nibble Fish Corner</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
   <style>
@@ -11,19 +11,14 @@
     .sensor-section { margin-bottom: 60px; }
     .sensor-title { font-size: 1.1em; margin-bottom: 10px; }
     canvas { max-width: 700px; }
-    .site-section { margin-bottom: 80px; }
     .error { color: red; }
   </style>
 </head>
 <body>
-  <h1>Zentra Multi-Site Sensor Dashboard</h1>
+  <h1>Zentra Sensor Dashboard: Nibble Fish Corner</h1>
   <div id="content">Loading data...</div>
   <script>
-    const sites = [
-      { name: 'Murphy Cemetery', device_sn: 'z6-33251' },
-      { name: 'Nibble Fish Corner', device_sn: 'z6-32482' },
-      { name: 'B&K Styron Yard', device_sn: 'z6-32414' }
-    ];
+    const site = { name: 'Nibble Fish Corner', device_sn: 'z6-32482' };
     const baseUrl = 'https://zentra-proxy.onrender.com/zentra';
 
     async function fetchSiteData(device_sn) {
@@ -78,61 +73,44 @@
       });
     }
 
-    // Helper function to pause for ms milliseconds
-    function delay(ms) {
-      return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
     async function render() {
       const contentDiv = document.getElementById('content');
       contentDiv.innerHTML = 'Loading data...';
 
-      let html = '';
-      const chartInitCalls = [];
-
-      for (const site of sites) {
-        html += `<div class="site-section"><h2>${site.name}</h2><div id="site_${site.device_sn}">Loading...</div></div>`;
-      }
-      contentDiv.innerHTML = html;
-
-      for (const site of sites) {
-        const siteDiv = document.getElementById(`site_${site.device_sn}`);
-        try {
-          const data = await fetchSiteData(site.device_sn);
-          if (!data || !data.data) {
-            siteDiv.innerHTML = '<div class="error">No sensor data available.</div>';
-            continue;
-          }
-          const sensors = data.data;
-          let siteHtml = '';
-          Object.keys(sensors).forEach((sensorKey, idx) => {
-            if (!Array.isArray(sensors[sensorKey])) return;
-            sensors[sensorKey].forEach((sensor, j) => {
-              const readings = sensor.readings || [];
-              if (readings.length === 0) return;
-              const sensorName = sensor.metadata?.sensor_name || sensorKey;
-              const units = sensor.metadata?.units || '';
-              const canvasId = `chart_${site.device_sn}_${sensorKey}_${idx}_${j}`;
-
-              siteHtml += `<div class="sensor-section">
-                <div class="sensor-title">${sensorName}${units ? ' (' + units + ')' : ''}</div>
-                <canvas id="${canvasId}" height="250"></canvas>
-              </div>`;
-
-              chartInitCalls.push(() => createChart(canvasId, readings, sensorName, units));
-            });
-          });
-
-          siteDiv.innerHTML = siteHtml || '<div class="error">No sensor readings found.</div>';
-        } catch (err) {
-          siteDiv.innerHTML = `<div class="error">Error loading data: ${err.message}</div>`;
-          console.error(`Error loading data for ${site.name}:`, err);
+      try {
+        const data = await fetchSiteData(site.device_sn);
+        if (!data || !data.data) {
+          contentDiv.innerHTML = '<div class="error">No sensor data available.</div>';
+          return;
         }
-        // Wait 15 seconds before next request to avoid rate limiting
-        await delay(15000);
-      }
+        const sensors = data.data;
+        let html = `<h2>${site.name}</h2>`;
+        const chartInitCalls = [];
 
-      chartInitCalls.forEach(fn => fn());
+        Object.keys(sensors).forEach((sensorKey, idx) => {
+          if (!Array.isArray(sensors[sensorKey])) return;
+          sensors[sensorKey].forEach((sensor, j) => {
+            const readings = sensor.readings || [];
+            if (readings.length === 0) return;
+            const sensorName = sensor.metadata?.sensor_name || sensorKey;
+            const units = sensor.metadata?.units || '';
+            const canvasId = `chart_${site.device_sn}_${sensorKey}_${idx}_${j}`;
+
+            html += `<div class="sensor-section">
+              <div class="sensor-title">${sensorName}${units ? ' (' + units + ')' : ''}</div>
+              <canvas id="${canvasId}" height="250"></canvas>
+            </div>`;
+
+            chartInitCalls.push(() => createChart(canvasId, readings, sensorName, units));
+          });
+        });
+
+        contentDiv.innerHTML = html || '<div class="error">No sensor readings found.</div>';
+        chartInitCalls.forEach(fn => fn());
+      } catch (err) {
+        contentDiv.innerHTML = `<div class="error">Error loading data: ${err.message}</div>`;
+        console.error(`Error loading data for ${site.name}:`, err);
+      }
     }
 
     render();
