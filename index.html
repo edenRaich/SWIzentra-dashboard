@@ -2,18 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Zentra Readings Dashboard</title>
+  <title>Zentra Readings Dashboard - Graphs Only</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Add the date adapter for Chart.js (date-fns) -->
+  <!-- Date adapter for Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/date-fns"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 40px; }
     .sensor-section { margin-bottom: 60px; }
     .sensor-title { font-size: 1.3em; margin-bottom: 10px; }
-    table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
-    th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; }
-    th { background: #f0f0f0; }
     canvas { max-width: 700px; }
   </style>
 </head>
@@ -28,21 +25,8 @@
       return response.json();
     }
 
-    function createTable(readings, units) {
-      let html = '<table><thead><tr><th>Timestamp</th><th>Value' + (units ? ' (' + units + ')' : '') + '</th></tr></thead><tbody>';
-      readings.forEach(r => {
-        html += `<tr>
-          <td>${r.datetime}</td>
-          <td>${r.value}</td>
-        </tr>`;
-      });
-      html += '</tbody></table>';
-      return html;
-    }
-
     function createChart(canvasId, readings, sensorName, units) {
       const ctx = document.getElementById(canvasId).getContext('2d');
-      // Sort readings by datetime ascending for proper chart display
       const sortedReadings = [...readings].sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
       const labels = sortedReadings.map(r => r.datetime);
       const data = sortedReadings.map(r => r.value);
@@ -101,7 +85,7 @@
         Object.keys(sensors).forEach((sensorKey, idx) => {
           sensors[sensorKey].forEach((sensor, j) => {
             const readings = sensor.readings || [];
-            if (readings.length === 0) return; // Skip sensors with no readings
+            if (readings.length === 0) return;
             const sensorName = sensor.metadata?.sensor_name || sensorKey;
             const units = sensor.metadata?.units || '';
             const sectionId = `sensor_${idx}_${j}`;
@@ -109,11 +93,9 @@
 
             html += `<div class="sensor-section" id="${sectionId}">
               <div class="sensor-title">${sensorName}${units ? ' (' + units + ')' : ''}</div>
-              ${createTable(readings, units)}
               <canvas id="${canvasId}" height="250"></canvas>
             </div>`;
 
-            // Defer chart creation until after DOM update
             chartInitCalls.push(() => createChart(canvasId, readings, sensorName, units));
           });
         });
@@ -121,7 +103,6 @@
         const contentDiv = document.getElementById('content');
         contentDiv.innerHTML = html;
 
-        // After DOM update, initialize all charts
         chartInitCalls.forEach(initFn => initFn());
 
       } catch (err) {
