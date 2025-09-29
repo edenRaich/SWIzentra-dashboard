@@ -44,7 +44,7 @@
     ];
 
     async function fetchData() {
-      const url = `http://localhost:3000/zentra?device_sn=${deviceSNs.join(',')}`;
+      const url = `https://zentra-proxy.onrender.com/zentra?device_sn=${deviceSNs.join(',')}`;    
       const res = await fetch(url);
       if (!res.ok) throw new Error('Failed to fetch data');
       return res.json();
