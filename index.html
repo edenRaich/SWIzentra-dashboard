@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <title>Zentra Device Battery Charts</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Use explicit Chart.js v4.x for CSP compliance -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
     .tab-button {
       margin-right: 5px;
@@ -36,6 +37,7 @@
   <div id="charts"></div>
 
   <script>
+    // List of device serial numbers
     const deviceSNs = [
       'z6-32482',
       'z6-12345',
@@ -43,8 +45,13 @@
       'z6-54321'
     ];
 
+    // Helper: Choose proxy URL based on environment
+    const baseUrl = (window.location.hostname === 'localhost')
+      ? 'http://localhost:3000'
+      : 'https://zentra-proxy.onrender.com';
+
     async function fetchData() {
-      const url = `https://zentra-proxy.onrender.com/zentra?device_sn=${deviceSNs.join(',')}`;    
+      const url = `${baseUrl}/zentra?device_sn=${deviceSNs.join(',')}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error('Failed to fetch data');
       return res.json();
@@ -100,7 +107,7 @@
                 tooltipFormat: 'll HH:mm',
                 unit: 'hour',
                 displayFormats: {
-                  hour: 'MMM D, HH:mm'
+                  hour: 'MMM d, HH:mm'
                 }
               },
               title: {
