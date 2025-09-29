@@ -2,9 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Zentra Device Battery Charts</title>
-  <!-- Use explicit Chart.js v4.x for CSP compliance -->
+  <title>Zentra Device Sensor Charts</title>
+  <!-- Chart.js v4.x (CSP-safe) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- Date adapter for time scale support -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
   <style>
     .tab-button {
       margin-right: 5px;
@@ -29,10 +31,18 @@
     .chart-container.active {
       display: block;
     }
+    .sensor-chart-block {
+      margin-bottom: 40px;
+    }
+    .sensor-title {
+      font-weight: bold;
+      margin-bottom: 4px;
+      margin-top: 16px;
+    }
   </style>
 </head>
 <body>
-  <h2>Zentra Device Battery Charts</h2>
+  <h2>Zentra Device Sensor Charts</h2>
   <div id="tabs"></div>
   <div id="charts"></div>
 
@@ -69,7 +79,6 @@
       const div = document.createElement('div');
       div.className = 'chart-container';
       div.id = `chart-container-${deviceSn}`;
-      div.innerHTML = `<canvas id="batteryChart-${deviceSn}" height="300"></canvas>`;
       return div;
     }
 
@@ -82,14 +91,28 @@
       });
     }
 
-    function createBatteryChart(deviceSn, readings) {
-      const ctx = document.getElementById(`batteryChart-${deviceSn}`).getContext('2d');
+    function createSensorChartBlock(deviceSn, sensorName, readings, units) {
+      const block = document.createElement('div');
+      block.className = 'sensor-chart-block';
+
+      const title = document.createElement('div');
+      title.className = 'sensor-title';
+      title.textContent = `${sensorName} (${units || ''})`;
+      block.appendChild(title);
+
+      const canvas = document.createElement('canvas');
+      canvas.id = `chart-${deviceSn}-${sensorName.replace(/\s+/g, '_')}`;
+      canvas.height = 300;
+      block.appendChild(canvas);
+
+      // Prepare data for chart
+      const ctx = canvas.getContext('2d');
       new Chart(ctx, {
         type: 'line',
         data: {
           labels: readings.map(r => r.datetime),
           datasets: [{
-            label: 'Battery Percentage',
+            label: sensorName,
             data: readings.map(r => r.value),
             fill: false,
             borderColor: 'rgba(75, 192, 192, 1)',
@@ -103,8 +126,8 @@
             x: {
               type: 'time',
               time: {
-                parser: 'YYYY-MM-DD HH:mm:ssZ',
-                tooltipFormat: 'll HH:mm',
+                parser: 'yyyy-MM-dd HH:mm:ssXXX', // date-fns format
+                tooltipFormat: 'PP HH:mm',
                 unit: 'hour',
                 displayFormats: {
                   hour: 'MMM d, HH:mm'
@@ -116,11 +139,10 @@
               }
             },
             y: {
-              beginAtZero: true,
-              max: 100,
+              beginAtZero: false,
               title: {
                 display: true,
-                text: 'Battery Percentage (%)'
+                text: units || sensorName
               }
             }
           },
@@ -130,6 +152,8 @@
           }
         }
       });
+
+      return block;
     }
 
     async function main() {
@@ -155,13 +179,22 @@
 
           // Chart container
           const chartDiv = createChartContainer(deviceSn);
-          chartsDiv.appendChild(chartDiv);
 
-          // Chart
-          const batteryData = device.data && device.data['Battery Percent']
-            ? device.data['Battery Percent'][0].readings
-            : [];
-          createBatteryChart(deviceSn, batteryData);
+          // For each sensor type in device.data
+          if (device.data) {
+            Object.entries(device.data).forEach(([sensorName, sensorArr]) => {
+              if (Array.isArray(sensorArr) && sensorArr.length > 0) {
+                const readings = sensorArr[0].readings || [];
+                const units = (sensorArr[0].metadata && sensorArr[0].metadata.units) || '';
+                if (readings.length > 0) {
+                  const sensorBlock = createSensorChartBlock(deviceSn, sensorName, readings, units);
+                  chartDiv.appendChild(sensorBlock);
+                }
+              }
+            });
+          }
+
+          chartsDiv.appendChild(chartDiv);
 
           // Activate first tab by default
           if (idx === 0) {
