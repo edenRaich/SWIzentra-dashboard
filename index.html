@@ -2,19 +2,20 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Zentra Dashboard</title>
+  <title>Zentra Dashboard - All Sensor Data</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body { font-family: sans-serif; background: #f8f8f8; }
-    #zentraChart { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; }
-    .container { width: 720px; margin: 40px auto; }
+    .container { width: 900px; margin: 40px auto; }
     h1 { text-align: center; }
+    .chart-block { margin-bottom: 40px; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 20px; }
+    .chart-title { text-align: center; margin-bottom: 10px; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Zentra Site Sensor Dashboard</h1>
-    <canvas id="zentraChart" width="700" height="450"></canvas>
+    <h1>Zentra Site Sensor Dashboard (All Data)</h1>
+    <div id="charts"></div>
   </div>
   <script>
     const siteNameMapping = {
@@ -29,80 +30,90 @@
       const r = Math.floor(Math.random() * 200) + 30;
       const g = Math.floor(Math.random() * 200) + 30;
       const b = Math.floor(Math.random() * 200) + 30;
-      return `rgba(${r},${g},${b},0.6)`;
+      return `rgba(${r},${g},${b},0.7)`;
     }
 
-    // Fetch all device data in parallel
-    Promise.all(
-      deviceSNs.map(sn =>
-        fetch(`https://zentra-proxy.onrender.com/zentra?device_sn=${sn}`)
-          .then(res => res.json())
-          .then(data => Array.isArray(data) ? data[0] : data)
-          .catch(err => {
-            console.error(`Error fetching data for ${sn}:`, err);
-            return null;
-          })
-      )
-    ).then(devices => {
-      // Remove any nulls or devices with errors
-      devices = devices.filter(device => device && !device.error && device.data);
-      if (!devices.length) {
-        alert("No valid device data available. Check API or network.");
-        return;
-      }
-      console.log("Combined devices data:", devices);
-
-      // Find all unique sensor keys (across all devices)
-      const sensorKeys = new Set();
-      devices.forEach(device => {
-        Object.keys(device.data).forEach(sensor => sensorKeys.add(sensor));
-      });
-
-      // Prepare labels (site names)
-      const labels = devices.map(device => siteNameMapping[device.device_sn] || device.device_sn);
-
-      // Prepare datasets: one per sensor type, value = latest reading
-      const datasets = Array.from(sensorKeys).map(sensor => ({
-        label: sensor,
-        data: devices.map(device => {
-          const sensorArr = device.data[sensor];
-          if (!sensorArr || !sensorArr.length) return null;
-          const readings = sensorArr[0].readings;
-          if (!readings || !readings.length) return null;
-          // Use the latest reading (first in array)
-          return readings[0].value;
-        }),
-        backgroundColor: getRandomColor(),
-        borderColor: 'rgba(0,0,0,0.1)',
-        borderWidth: 1
-      }));
-
-      // Filter out datasets with all null/undefined
-      const filteredDatasets = datasets.filter(ds => ds.data.some(val => val !== null && val !== undefined));
-
-      // Render chart
-      const ctx = document.getElementById('zentraChart').getContext('2d');
-      new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: filteredDatasets
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { position: 'top' },
-            title: { display: true, text: 'Latest Sensor Data by Site' }
-          },
-          scales: {
-            y: { beginAtZero: true }
-          }
+    fetch('https://zentra-proxy.onrender.com/zentra?' + deviceSNs.map(sn => `device_sn=${sn}`).join('&'))
+      .then(res => res.json())
+      .then(devices => {
+        devices = devices.filter(device => device && !device.error && device.data);
+        if (!devices.length) {
+          alert("No valid device data available. Check API or network.");
+          return;
         }
+        // Gather all unique sensor types
+        const allSensorTypes = new Set();
+        devices.forEach(device => {
+          Object.keys(device.data).forEach(sensor => allSensorTypes.add(sensor));
+        });
+
+        // For each sensor type, build a chart
+        const chartsDiv = document.getElementById('charts');
+        allSensorTypes.forEach(sensorType => {
+          // Gather all unique timestamps for this sensor across all devices
+          const allTimestamps = new Set();
+          devices.forEach(device => {
+            const sensorArr = device.data[sensorType];
+            if (sensorArr && sensorArr.length && sensorArr[0].readings) {
+              sensorArr[0].readings.forEach(r => allTimestamps.add(r.datetime));
+            }
+          });
+          // Sort timestamps
+          const sortedTimestamps = Array.from(allTimestamps).sort();
+
+          // Prepare datasets: one per site
+          const datasets = devices.map(device => {
+            const sensorArr = device.data[sensorType];
+            let readingsMap = {};
+            if (sensorArr && sensorArr.length && sensorArr[0].readings) {
+              readingsMap = Object.fromEntries(sensorArr[0].readings.map(r => [r.datetime, r.value]));
+            }
+            return {
+              label: siteNameMapping[device.device_sn] || device.device_sn,
+              data: sortedTimestamps.map(ts => readingsMap[ts] !== undefined ? readingsMap[ts] : null),
+              fill: false,
+              borderColor: getRandomColor(),
+              backgroundColor: getRandomColor(),
+              tension: 0.1
+            };
+          });
+
+          // Create chart block
+          const chartBlock = document.createElement('div');
+          chartBlock.className = 'chart-block';
+          const chartTitle = document.createElement('div');
+          chartTitle.className = 'chart-title';
+          chartTitle.textContent = sensorType;
+          const canvas = document.createElement('canvas');
+          chartBlock.appendChild(chartTitle);
+          chartBlock.appendChild(canvas);
+          chartsDiv.appendChild(chartBlock);
+
+          // Render chart
+          new Chart(canvas.getContext('2d'), {
+            type: 'line',
+            data: {
+              labels: sortedTimestamps,
+              datasets: datasets
+            },
+            options: {
+              responsive: true,
+              plugins: {
+                legend: { position: 'top' },
+                title: { display: false }
+              },
+              scales: {
+                x: { title: { display: true, text: 'Datetime' } },
+                y: { title: { display: true, text: 'Value' }, beginAtZero: false }
+              }
+            }
+          });
+        });
+      })
+      .catch(err => {
+        alert("Error fetching or processing data. See console for details.");
+        console.error("Error fetching or processing data:", err);
       });
-    }).catch(err => {
-      alert("Error fetching or processing data. See console for details.");
-      console.error("Error fetching or processing data:", err);
-    });
   </script>
 </body>
 </html>
