@@ -27,11 +27,23 @@
     .controls { text-align: right; margin-bottom: 10px; }
     .controls label { margin-right: 8px; }
     .controls input[type="date"] { font-size: 1em; }
+    #rate-limit-message {
+      background: #ffe0e0;
+      color: #a00;
+      border: 1px solid #a00;
+      border-radius: 6px;
+      padding: 16px;
+      margin: 20px 0;
+      text-align: center;
+      font-size: 1.2em;
+      display: none;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Zentra Site Sensor Dashboard</h1>
+    <div id="rate-limit-message"></div>
     <div class="tabs" id="tabs"></div>
     <div id="tab-contents"></div>
   </div>
@@ -51,33 +63,46 @@
       return `rgba(${r},${g},${b},0.7)`;
     }
 
-    function getNDaysAgoISO(days) {
+    function getNDaysAgoZentraFormat(days) {
+      const d = new Date();
+      d.setDate(d.getDate() - days);
+      return d.toISOString().split('T')[0] + ' 00:00';
+    }
+
+    function getNDaysAgoInputValue(days) {
       const d = new Date();
       d.setDate(d.getDate() - days);
       return d.toISOString().split('T')[0];
     }
 
-    // Store loaded data for all sites so we can filter client-side if needed
-    let allDevicesRaw = [];
+    function showRateLimitMessage() {
+      const msgDiv = document.getElementById('rate-limit-message');
+      msgDiv.textContent = "Rate limit reached. Waiting 60 seconds to reload...";
+      msgDiv.style.display = "block";
+      setTimeout(() => {
+        location.reload();
+      }, 60000);
+    }
 
     function loadCharts(startDate = null, siteOverride = null) {
-      // If siteOverride is set, only fetch that site, else fetch all
       const snList = siteOverride ? [siteOverride] : deviceSNs;
       const url = 'https://zentra-proxy.onrender.com/zentra?' +
         snList.map(sn => `device_sn=${sn}`).join('&') +
-        (startDate ? `&start_date=${startDate}` : '');
+        (startDate ? `&start_date=${encodeURIComponent(startDate)}` : '');
 
       fetch(url)
         .then(res => res.json())
         .then(devices => {
+          // 429 handling: If any device has status 429, show message and reload after 60s
+          if (Array.isArray(devices) && devices.some(device => device && device.status == 429)) {
+            showRateLimitMessage();
+            return;
+          }
           devices = devices.filter(device => device && !device.error && device.data);
           if (!devices.length) {
             alert("No valid device data available. Check API or network.");
             return;
           }
-
-          // If loading all, store for later
-          if (!siteOverride) allDevicesRaw = devices;
 
           // Build tabs and contents only if loading all
           if (!siteOverride) {
@@ -137,11 +162,12 @@
       label.textContent = "Show data since:";
       const dateInput = document.createElement('input');
       dateInput.type = "date";
-      dateInput.value = startDate || getNDaysAgoISO(7);
+      // Set value to just the date part
+      dateInput.value = startDate ? startDate.split(' ')[0] : getNDaysAgoInputValue(7);
       dateInput.max = new Date().toISOString().split('T')[0];
       dateInput.onchange = () => {
-        // Reload just this site with the new date
-        loadCharts(dateInput.value, device.device_sn);
+        // When changed, reload just this site with the new date in ZentraCloud format
+        loadCharts(dateInput.value + ' 00:00', device.device_sn);
       };
       controls.appendChild(label);
       controls.appendChild(dateInput);
@@ -201,8 +227,8 @@
       });
     }
 
-    // Initial load: past week
-    loadCharts(getNDaysAgoISO(7));
+    // Initial load: past week, in ZentraCloud format
+    loadCharts(getNDaysAgoZentraFormat(7));
   </script>
 </body>
 </html>
