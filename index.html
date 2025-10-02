@@ -1,242 +1,165 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Device Sensor Charts - Nibble Fish Corner</title>
+  <title>Device Sensor Charts - All Sites</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f9f9f9;
-      margin: 0;
-      padding: 0;
-    }
-    h2 {
-      text-align: center;
-      margin-top: 30px;
-    }
-    #charts-container {
-      max-width: 900px;
-      margin: 30px auto 40px;
-      padding: 0 10px 20px 10px;
-      background: white;
-      border-radius: 6px;
-      box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
-    }
-    .chart-wrapper {
-      margin: 30px 0;
-    }
-    canvas {
-      width: 100% !important;
-      height: 300px !important;
-    }
-    #charts-loading,
-    #charts-error {
-      text-align: center;
-      font-style: italic;
-      color: #666;
-      padding: 20px 0;
-    }
-    #charts-error {
-      color: red;
-    }
+    body { font-family: Arial, sans-serif; background: #f9f9f9; }
+    .site-section { background: #fff; margin: 30px auto; padding: 20px; border-radius: 6px; box-shadow: 0 2px 8px rgb(0 0 0 / 0.1); max-width: 900px; }
+    h2 { text-align: center; }
+    .chart-wrapper { margin: 30px 0; }
+    canvas { width: 100% !important; height: 300px !important; }
   </style>
 </head>
 <body>
-  <h2>Device Sensor Charts: Nibble Fish Corner</h2>
-  <div id="charts-container" aria-live="polite" aria-busy="false">
-    <div id="charts-loading">Loading sensor charts...</div>
-    <div id="charts-error" style="display:none;"></div>
-    <div class="chart-wrapper" id="battery-chart-wrapper" style="display:none;">
-      <h3>Battery Percentage</h3>
-      <canvas id="batteryChart"></canvas>
-    </div>
-    <div id="other-sensors-charts"></div>
-  </div>
+  <h2>Device Sensor Charts: All Sites</h2>
+  <div id="sites-container"></div>
 
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
-  <!-- Chart.js date adapter -->
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@2.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
   <script>
-    (function () {
-      const device = {
-        name: "Nibble Fish Corner",
-        device_sn: "z6-32482"
-      };
-      const proxyUrl = "https://zentra-proxy.onrender.com/zentra";
+    const siteMap = {
+      "z6-33252": "Ghost Forest",
+      "z6-33251": "Murphy Cemetery",
+      "z6-32482": "Nibble Fish Corner",
+      "z6-32414": "B & K Styron Yard"
+    };
+    const proxyUrl = "https://zentra-proxy.onrender.com/zentra";
 
-      let batteryChart = null;
-      let otherSensorCharts = {};
+    function parseDateTime(datetimeStr) {
+      return new Date(datetimeStr);
+    }
 
-      function parseDateTime(datetimeStr) {
-        return new Date(datetimeStr);
-      }
+    async function fetchSensorReadings(device_sn) {
+      const response = await fetch(`${proxyUrl}?device_sn=${encodeURIComponent(device_sn)}`);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const json = await response.json();
+      return json.data || {};
+    }
 
-      async function fetchSensorReadings() {
-        const response = await fetch(
-          `${proxyUrl}?device_sn=${encodeURIComponent(device.device_sn)}`
-        );
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const json = await response.json();
-        return json.data || {};
-      }
+    async function renderSiteCharts(device_sn, site_name) {
+      const container = document.getElementById("sites-container");
+      const section = document.createElement("div");
+      section.className = "site-section";
+      section.innerHTML = `<h3>${site_name}</h3>
+        <div class="chart-wrapper"><canvas id="batteryChart_${device_sn}"></canvas></div>
+        <div class="chart-wrapper" id="otherCharts_${device_sn}"></div>`;
+      container.appendChild(section);
 
-      async function renderCharts() {
-        const loadingElem = document.getElementById("charts-loading");
-        const errorElem = document.getElementById("charts-error");
-        const batteryWrapper = document.getElementById("battery-chart-wrapper");
-        const otherSensorsChartsDiv = document.getElementById("other-sensors-charts");
+      try {
+        const data = await fetchSensorReadings(device_sn);
 
-        loadingElem.style.display = "block";
-        errorElem.style.display = "none";
-        batteryWrapper.style.display = "none";
-        otherSensorsChartsDiv.innerHTML = "";
+        // Battery chart
+        const batterySensor = data["Battery Percent"];
+        if (batterySensor && batterySensor[0]?.readings) {
+          const batteryReadings = batterySensor[0].readings;
+          const batteryLabels = batteryReadings.map(r => parseDateTime(r.datetime));
+          const batteryValues = batteryReadings.map(r => r.value);
 
-        // Destroy old charts if any
-        if (batteryChart) {
-          batteryChart.destroy();
-          batteryChart = null;
-        }
-        Object.values(otherSensorCharts).forEach(chart => chart.destroy && chart.destroy());
-        otherSensorCharts = {};
-
-        try {
-          const data = await fetchSensorReadings();
-
-          if (!data || Object.keys(data).length === 0) {
-            throw new Error("No sensor data available.");
-          }
-
-          // Battery chart
-          const batterySensor = data["Battery Percent"];
-          if (batterySensor && batterySensor[0]?.readings) {
-            const batteryReadings = batterySensor[0].readings;
-            const batteryLabels = batteryReadings.map(r => parseDateTime(r.datetime));
-            const batteryValues = batteryReadings.map(r => r.value);
-
-            const batteryCtx = document.getElementById("batteryChart").getContext("2d");
-            batteryChart = new Chart(batteryCtx, {
-              type: "line",
-              data: {
-                labels: batteryLabels,
-                datasets: [{
-                  label: "Battery Percentage (%)",
-                  data: batteryValues,
-                  fill: false,
-                  borderColor: "rgba(75, 192, 192, 1)",
-                  backgroundColor: "rgba(75, 192, 192, 0.2)",
-                  tension: 0.1,
-                  pointRadius: 2,
-                  pointHoverRadius: 5,
-                }]
+          const batteryCtx = document.getElementById(`batteryChart_${device_sn}`).getContext("2d");
+          new Chart(batteryCtx, {
+            type: "line",
+            data: {
+              labels: batteryLabels,
+              datasets: [{
+                label: "Battery Percentage (%)",
+                data: batteryValues,
+                fill: false,
+                borderColor: "rgba(75, 192, 192, 1)",
+                backgroundColor: "rgba(75, 192, 192, 0.2)",
+                tension: 0.1,
+                pointRadius: 2,
+                pointHoverRadius: 5,
+              }]
+            },
+            options: {
+              responsive: true,
+              scales: {
+                x: {
+                  type: "time",
+                  time: { tooltipFormat: "PPpp", unit: "hour", displayFormats: { hour: "MMM d, HH:mm" } },
+                  title: { display: true, text: "Timestamp" }
+                },
+                y: {
+                  beginAtZero: true,
+                  max: 100,
+                  title: { display: true, text: "Battery Percentage (%)" }
+                }
               },
-              options: {
-                responsive: true,
-                scales: {
-                  x: {
-                    type: "time",
-                    time: {
-                      tooltipFormat: "PPpp",
-                      unit: "hour",
-                      displayFormats: { hour: "MMM d, HH:mm" }
-                    },
-                    title: { display: true, text: "Timestamp" }
-                  },
-                  y: {
-                    beginAtZero: true,
-                    max: 100,
-                    title: { display: true, text: "Battery Percentage (%)" }
-                  }
-                },
-                plugins: {
-                  legend: { display: true },
-                  tooltip: { mode: "index", intersect: false }
-                }
+              plugins: {
+                legend: { display: true },
+                tooltip: { mode: "index", intersect: false }
               }
-            });
-            batteryWrapper.style.display = "block";
-          }
-
-          // Other sensors: one chart per sensor
-          const otherSensorNames = Object.keys(data).filter(name => name !== "Battery Percent");
-          if (otherSensorNames.length > 0) {
-            otherSensorNames.forEach((sensorName, idx) => {
-              const sensorData = data[sensorName][0];
-              if (!sensorData?.readings) return;
-
-              const readings = sensorData.readings;
-              const labels = readings.map(r => parseDateTime(r.datetime));
-              const values = readings.map(r => r.value);
-              const units = sensorData.metadata?.units || "";
-
-              // Create wrapper div and canvas
-              const wrapper = document.createElement("div");
-              wrapper.className = "chart-wrapper";
-              const title = document.createElement("h3");
-              title.textContent = `${sensorName}${units ? " (" + units + ")" : ""}`;
-              const canvas = document.createElement("canvas");
-              canvas.id = `sensorChart_${idx}`;
-              wrapper.appendChild(title);
-              wrapper.appendChild(canvas);
-              otherSensorsChartsDiv.appendChild(wrapper);
-
-              // Create chart
-              const ctx = canvas.getContext("2d");
-              otherSensorCharts[sensorName] = new Chart(ctx, {
-                type: "line",
-                data: {
-                  labels: labels,
-                  datasets: [{
-                    label: sensorName + (units ? ` (${units})` : ""),
-                    data: values,
-                    fill: false,
-                    borderColor: "rgba(54, 162, 235, 1)",
-                    backgroundColor: "rgba(54, 162, 235, 0.2)",
-                    tension: 0.1,
-                    pointRadius: 2,
-                    pointHoverRadius: 5,
-                  }]
-                },
-                options: {
-                  responsive: true,
-                  scales: {
-                    x: {
-                      type: "time",
-                      time: {
-                        tooltipFormat: "PPpp",
-                        unit: "hour",
-                        displayFormats: { hour: "MMM d, HH:mm" }
-                      },
-                      title: { display: true, text: "Timestamp" }
-                    },
-                    y: {
-                      beginAtZero: false,
-                      title: { display: true, text: units ? units : "Value" }
-                    }
-                  },
-                  plugins: {
-                    legend: { display: true },
-                    tooltip: { mode: "index", intersect: false }
-                  }
-                }
-              });
-            });
-          }
-
-          loadingElem.style.display = "none";
-        } catch (error) {
-          loadingElem.style.display = "none";
-          errorElem.style.display = "block";
-          errorElem.textContent =
-            "Error loading sensor charts: " + (error.message || error);
-          console.error("Error rendering charts:", error);
+            }
+          });
         }
-      }
 
-      renderCharts();
-    })();
+        // Other sensors
+        const otherSensorNames = Object.keys(data).filter(name => name !== "Battery Percent");
+        const otherChartsDiv = document.getElementById(`otherCharts_${device_sn}`);
+        otherSensorNames.forEach((sensorName, idx) => {
+          const sensorData = data[sensorName][0];
+          if (!sensorData?.readings) return;
+
+          const readings = sensorData.readings;
+          const labels = readings.map(r => parseDateTime(r.datetime));
+          const values = readings.map(r => r.value);
+          const units = sensorData.metadata?.units || "";
+
+          const wrapper = document.createElement("div");
+          wrapper.className = "chart-wrapper";
+          const title = document.createElement("h4");
+          title.textContent = `${sensorName}${units ? " (" + units + ")" : ""}`;
+          const canvas = document.createElement("canvas");
+          canvas.id = `sensorChart_${device_sn}_${idx}`;
+          wrapper.appendChild(title);
+          wrapper.appendChild(canvas);
+          otherChartsDiv.appendChild(wrapper);
+
+          const ctx = canvas.getContext("2d");
+          new Chart(ctx, {
+            type: "line",
+            data: {
+              labels: labels,
+              datasets: [{
+                label: sensorName + (units ? ` (${units})` : ""),
+                data: values,
+                fill: false,
+                borderColor: "rgba(54, 162, 235, 1)",
+                backgroundColor: "rgba(54, 162, 235, 0.2)",
+                tension: 0.1,
+                pointRadius: 2,
+                pointHoverRadius: 5,
+              }]
+            },
+            options: {
+              responsive: true,
+              scales: {
+                x: {
+                  type: "time",
+                  time: { tooltipFormat: "PPpp", unit: "hour", displayFormats: { hour: "MMM d, HH:mm" } },
+                  title: { display: true, text: "Timestamp" }
+                },
+                y: {
+                  beginAtZero: false,
+                  title: { display: true, text: units ? units : "Value" }
+                }
+              },
+              plugins: {
+                legend: { display: true },
+                tooltip: { mode: "index", intersect: false }
+              }
+            }
+          });
+        });
+      } catch (error) {
+        section.innerHTML += `<div style="color:red;">Error loading data: ${error.message}</div>`;
+      }
+    }
+
+    // Render charts for all sites
+    Object.entries(siteMap).forEach(([device_sn, site_name]) => {
+      renderSiteCharts(device_sn, site_name);
+    });
   </script>
 </body>
 </html>
