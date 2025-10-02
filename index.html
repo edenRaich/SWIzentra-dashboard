@@ -37,11 +37,7 @@
       deviceSNs.map(sn =>
         fetch(`https://zentra-proxy.onrender.com/zentra?device_sn=${sn}`)
           .then(res => res.json())
-          .then(data => {
-            // If API returns array, take first element; else use as is
-            if (Array.isArray(data)) return data[0];
-            return data;
-          })
+          .then(data => Array.isArray(data) ? data[0] : data)
           .catch(err => {
             console.error(`Error fetching data for ${sn}:`, err);
             return null;
@@ -49,28 +45,33 @@
       )
     ).then(devices => {
       // Remove any nulls or devices with errors
-      devices = devices.filter(device => device && !device.error);
+      devices = devices.filter(device => device && !device.error && device.data);
       if (!devices.length) {
         alert("No valid device data available. Check API or network.");
         return;
       }
       console.log("Combined devices data:", devices);
 
+      // Find all unique sensor keys (across all devices)
+      const sensorKeys = new Set();
+      devices.forEach(device => {
+        Object.keys(device.data).forEach(sensor => sensorKeys.add(sensor));
+      });
+
       // Prepare labels (site names)
       const labels = devices.map(device => siteNameMapping[device.device_sn] || device.device_sn);
 
-      // Find all unique sensor keys (excluding device_sn)
-      const sensorKeys = new Set();
-      devices.forEach(device => {
-        Object.keys(device).forEach(key => {
-          if (key !== 'device_sn') sensorKeys.add(key);
-        });
-      });
-
-      // Prepare datasets: one per sensor type
+      // Prepare datasets: one per sensor type, value = latest reading
       const datasets = Array.from(sensorKeys).map(sensor => ({
         label: sensor,
-        data: devices.map(device => device[sensor] !== undefined ? device[sensor] : null),
+        data: devices.map(device => {
+          const sensorArr = device.data[sensor];
+          if (!sensorArr || !sensorArr.length) return null;
+          const readings = sensorArr[0].readings;
+          if (!readings || !readings.length) return null;
+          // Use the latest reading (first in array)
+          return readings[0].value;
+        }),
         backgroundColor: getRandomColor(),
         borderColor: 'rgba(0,0,0,0.1)',
         borderWidth: 1
@@ -91,7 +92,7 @@
           responsive: true,
           plugins: {
             legend: { position: 'top' },
-            title: { display: true, text: 'Sensor Data by Site' }
+            title: { display: true, text: 'Latest Sensor Data by Site' }
           },
           scales: {
             y: { beginAtZero: true }
