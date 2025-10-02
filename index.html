@@ -2,20 +2,35 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Zentra Dashboard - All Sensor Data</title>
+  <title>Zentra Dashboard - Tabs by Site</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body { font-family: sans-serif; background: #f8f8f8; }
     .container { width: 900px; margin: 40px auto; }
     h1 { text-align: center; }
+    .tabs { display: flex; border-bottom: 2px solid #ccc; margin-bottom: 20px; }
+    .tab {
+      padding: 12px 24px;
+      cursor: pointer;
+      background: #eee;
+      border: none;
+      border-radius: 8px 8px 0 0;
+      margin-right: 4px;
+      font-size: 1.1em;
+      transition: background 0.2s;
+    }
+    .tab.active { background: #fff; border-bottom: 2px solid #fff; font-weight: bold; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
     .chart-block { margin-bottom: 40px; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 20px; }
     .chart-title { text-align: center; margin-bottom: 10px; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Zentra Site Sensor Dashboard (All Data)</h1>
-    <div id="charts"></div>
+    <h1>Zentra Site Sensor Dashboard</h1>
+    <div class="tabs" id="tabs"></div>
+    <div id="tab-contents"></div>
   </div>
   <script>
     const siteNameMapping = {
@@ -41,73 +56,87 @@
           alert("No valid device data available. Check API or network.");
           return;
         }
-        // Gather all unique sensor types
-        const allSensorTypes = new Set();
-        devices.forEach(device => {
-          Object.keys(device.data).forEach(sensor => allSensorTypes.add(sensor));
+
+        // Build tabs
+        const tabsDiv = document.getElementById('tabs');
+        const tabContentsDiv = document.getElementById('tab-contents');
+        tabsDiv.innerHTML = '';
+        tabContentsDiv.innerHTML = '';
+
+        devices.forEach((device, idx) => {
+          const siteName = siteNameMapping[device.device_sn] || device.device_sn;
+
+          // Create tab button
+          const tabBtn = document.createElement('button');
+          tabBtn.className = 'tab' + (idx === 0 ? ' active' : '');
+          tabBtn.textContent = siteName;
+          tabBtn.dataset.tab = `tab-${device.device_sn}`;
+          tabsDiv.appendChild(tabBtn);
+
+          // Create tab content
+          const tabContent = document.createElement('div');
+          tabContent.className = 'tab-content' + (idx === 0 ? ' active' : '');
+          tabContent.id = `tab-${device.device_sn}`;
+
+          // For each sensor/port, create a chart
+          Object.keys(device.data).forEach(sensorType => {
+            const sensorArr = device.data[sensorType];
+            if (!sensorArr || !sensorArr.length || !sensorArr[0].readings) return;
+            const readings = sensorArr[0].readings;
+            const sortedReadings = readings.slice().sort((a, b) => a.datetime.localeCompare(b.datetime));
+            const labels = sortedReadings.map(r => r.datetime);
+            const data = sortedReadings.map(r => r.value);
+
+            // Chart block
+            const chartBlock = document.createElement('div');
+            chartBlock.className = 'chart-block';
+            const chartTitle = document.createElement('div');
+            chartTitle.className = 'chart-title';
+            chartTitle.textContent = sensorType;
+            const canvas = document.createElement('canvas');
+            chartBlock.appendChild(chartTitle);
+            chartBlock.appendChild(canvas);
+            tabContent.appendChild(chartBlock);
+
+            // Render chart
+            new Chart(canvas.getContext('2d'), {
+              type: 'line',
+              data: {
+                labels: labels,
+                datasets: [{
+                  label: sensorType,
+                  data: data,
+                  fill: false,
+                  borderColor: getRandomColor(),
+                  backgroundColor: getRandomColor(),
+                  tension: 0.1
+                }]
+              },
+              options: {
+                responsive: true,
+                plugins: {
+                  legend: { display: false },
+                  title: { display: false }
+                },
+                scales: {
+                  x: { title: { display: true, text: 'Datetime' } },
+                  y: { title: { display: true, text: 'Value' }, beginAtZero: false }
+                }
+              }
+            });
+          });
+
+          tabContentsDiv.appendChild(tabContent);
         });
 
-        // For each sensor type, build a chart
-        const chartsDiv = document.getElementById('charts');
-        allSensorTypes.forEach(sensorType => {
-          // Gather all unique timestamps for this sensor across all devices
-          const allTimestamps = new Set();
-          devices.forEach(device => {
-            const sensorArr = device.data[sensorType];
-            if (sensorArr && sensorArr.length && sensorArr[0].readings) {
-              sensorArr[0].readings.forEach(r => allTimestamps.add(r.datetime));
-            }
-          });
-          // Sort timestamps
-          const sortedTimestamps = Array.from(allTimestamps).sort();
-
-          // Prepare datasets: one per site
-          const datasets = devices.map(device => {
-            const sensorArr = device.data[sensorType];
-            let readingsMap = {};
-            if (sensorArr && sensorArr.length && sensorArr[0].readings) {
-              readingsMap = Object.fromEntries(sensorArr[0].readings.map(r => [r.datetime, r.value]));
-            }
-            return {
-              label: siteNameMapping[device.device_sn] || device.device_sn,
-              data: sortedTimestamps.map(ts => readingsMap[ts] !== undefined ? readingsMap[ts] : null),
-              fill: false,
-              borderColor: getRandomColor(),
-              backgroundColor: getRandomColor(),
-              tension: 0.1
-            };
-          });
-
-          // Create chart block
-          const chartBlock = document.createElement('div');
-          chartBlock.className = 'chart-block';
-          const chartTitle = document.createElement('div');
-          chartTitle.className = 'chart-title';
-          chartTitle.textContent = sensorType;
-          const canvas = document.createElement('canvas');
-          chartBlock.appendChild(chartTitle);
-          chartBlock.appendChild(canvas);
-          chartsDiv.appendChild(chartBlock);
-
-          // Render chart
-          new Chart(canvas.getContext('2d'), {
-            type: 'line',
-            data: {
-              labels: sortedTimestamps,
-              datasets: datasets
-            },
-            options: {
-              responsive: true,
-              plugins: {
-                legend: { position: 'top' },
-                title: { display: false }
-              },
-              scales: {
-                x: { title: { display: true, text: 'Datetime' } },
-                y: { title: { display: true, text: 'Value' }, beginAtZero: false }
-              }
-            }
-          });
+        // Tab switching logic
+        tabsDiv.addEventListener('click', function(e) {
+          if (e.target.classList.contains('tab')) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+            e.target.classList.add('active');
+            document.getElementById(e.target.dataset.tab).classList.add('active');
+          }
         });
       })
       .catch(err => {
