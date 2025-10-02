@@ -24,6 +24,9 @@
     .tab-content.active { display: block; }
     .chart-block { margin-bottom: 40px; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 20px; }
     .chart-title { text-align: center; margin-bottom: 10px; }
+    .controls { text-align: right; margin-bottom: 10px; }
+    .controls label { margin-right: 8px; }
+    .controls input[type="date"] { font-size: 1em; }
   </style>
 </head>
 <body>
@@ -48,102 +51,158 @@
       return `rgba(${r},${g},${b},0.7)`;
     }
 
-    fetch('https://zentra-proxy.onrender.com/zentra?' + deviceSNs.map(sn => `device_sn=${sn}`).join('&'))
-      .then(res => res.json())
-      .then(devices => {
-        console.log("Fetched devices (raw):", devices);
-        devices = devices.filter(device => device && !device.error && device.data);
-        if (!devices.length) {
-          alert("No valid device data available. Check API or network.");
-          return;
-        }
+    function getNDaysAgoISO(days) {
+      const d = new Date();
+      d.setDate(d.getDate() - days);
+      return d.toISOString().split('T')[0];
+    }
 
-        // Build tabs
-        const tabsDiv = document.getElementById('tabs');
-        const tabContentsDiv = document.getElementById('tab-contents');
-        tabsDiv.innerHTML = '';
-        tabContentsDiv.innerHTML = '';
+    // Store loaded data for all sites so we can filter client-side if needed
+    let allDevicesRaw = [];
 
-        devices.forEach((device, idx) => {
-          const siteName = siteNameMapping[device.device_sn] || device.device_sn;
+    function loadCharts(startDate = null, siteOverride = null) {
+      // If siteOverride is set, only fetch that site, else fetch all
+      const snList = siteOverride ? [siteOverride] : deviceSNs;
+      const url = 'https://zentra-proxy.onrender.com/zentra?' +
+        snList.map(sn => `device_sn=${sn}`).join('&') +
+        (startDate ? `&start_date=${startDate}` : '');
 
-          // Create tab button
-          const tabBtn = document.createElement('button');
-          tabBtn.className = 'tab' + (idx === 0 ? ' active' : '');
-          tabBtn.textContent = siteName;
-          tabBtn.dataset.tab = `tab-${device.device_sn}`;
-          tabsDiv.appendChild(tabBtn);
+      fetch(url)
+        .then(res => res.json())
+        .then(devices => {
+          devices = devices.filter(device => device && !device.error && device.data);
+          if (!devices.length) {
+            alert("No valid device data available. Check API or network.");
+            return;
+          }
 
-          // Create tab content
-          const tabContent = document.createElement('div');
-          tabContent.className = 'tab-content' + (idx === 0 ? ' active' : '');
-          tabContent.id = `tab-${device.device_sn}`;
+          // If loading all, store for later
+          if (!siteOverride) allDevicesRaw = devices;
 
-          // For each sensor/port, create a chart
-          Object.keys(device.data).forEach(sensorType => {
-            const sensorArr = device.data[sensorType];
-            if (!sensorArr || !sensorArr.length || !sensorArr[0].readings) return;
-            const readings = sensorArr[0].readings;
-            const sortedReadings = readings.slice().sort((a, b) => a.datetime.localeCompare(b.datetime));
-            const labels = sortedReadings.map(r => r.datetime);
-            const data = sortedReadings.map(r => r.value);
+          // Build tabs and contents only if loading all
+          if (!siteOverride) {
+            const tabsDiv = document.getElementById('tabs');
+            const tabContentsDiv = document.getElementById('tab-contents');
+            tabsDiv.innerHTML = '';
+            tabContentsDiv.innerHTML = '';
 
-            // Chart block
-            const chartBlock = document.createElement('div');
-            chartBlock.className = 'chart-block';
-            const chartTitle = document.createElement('div');
-            chartTitle.className = 'chart-title';
-            chartTitle.textContent = sensorType;
-            const canvas = document.createElement('canvas');
-            chartBlock.appendChild(chartTitle);
-            chartBlock.appendChild(canvas);
-            tabContent.appendChild(chartBlock);
+            devices.forEach((device, idx) => {
+              const siteName = siteNameMapping[device.device_sn] || device.device_sn;
 
-            // Render chart
-            new Chart(canvas.getContext('2d'), {
-              type: 'line',
-              data: {
-                labels: labels,
-                datasets: [{
-                  label: sensorType,
-                  data: data,
-                  fill: false,
-                  borderColor: getRandomColor(),
-                  backgroundColor: getRandomColor(),
-                  tension: 0.1
-                }]
-              },
-              options: {
-                responsive: true,
-                plugins: {
-                  legend: { display: false },
-                  title: { display: false }
-                },
-                scales: {
-                  x: { title: { display: true, text: 'Datetime' } },
-                  y: { title: { display: true, text: 'Value' }, beginAtZero: false }
-                }
+              // Create tab button
+              const tabBtn = document.createElement('button');
+              tabBtn.className = 'tab' + (idx === 0 ? ' active' : '');
+              tabBtn.textContent = siteName;
+              tabBtn.dataset.tab = `tab-${device.device_sn}`;
+              tabsDiv.appendChild(tabBtn);
+
+              // Create tab content
+              const tabContent = document.createElement('div');
+              tabContent.className = 'tab-content' + (idx === 0 ? ' active' : '');
+              tabContent.id = `tab-${device.device_sn}`;
+              tabContentsDiv.appendChild(tabContent);
+
+              // Render controls and charts for this site
+              renderSiteTab(device, tabContent, startDate);
+            });
+
+            // Tab switching logic
+            tabsDiv.addEventListener('click', function(e) {
+              if (e.target.classList.contains('tab')) {
+                document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+                e.target.classList.add('active');
+                document.getElementById(e.target.dataset.tab).classList.add('active');
               }
             });
-          });
-
-          tabContentsDiv.appendChild(tabContent);
+          } else {
+            // If only one site is being reloaded, update just that tab content
+            const device = devices[0];
+            const tabContent = document.getElementById(`tab-${device.device_sn}`);
+            tabContent.innerHTML = '';
+            renderSiteTab(device, tabContent, startDate);
+          }
+        })
+        .catch(err => {
+          alert("Error fetching or processing data. See console for details.");
+          console.error("Error fetching or processing data:", err);
         });
+    }
 
-        // Tab switching logic
-        tabsDiv.addEventListener('click', function(e) {
-          if (e.target.classList.contains('tab')) {
-            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
-            e.target.classList.add('active');
-            document.getElementById(e.target.dataset.tab).classList.add('active');
+    function renderSiteTab(device, tabContent, startDate) {
+      // Controls (date picker)
+      const controls = document.createElement('div');
+      controls.className = 'controls';
+      const label = document.createElement('label');
+      label.textContent = "Show data since:";
+      const dateInput = document.createElement('input');
+      dateInput.type = "date";
+      dateInput.value = startDate || getNDaysAgoISO(7);
+      dateInput.max = new Date().toISOString().split('T')[0];
+      dateInput.onchange = () => {
+        // Reload just this site with the new date
+        loadCharts(dateInput.value, device.device_sn);
+      };
+      controls.appendChild(label);
+      controls.appendChild(dateInput);
+      tabContent.appendChild(controls);
+
+      // For each sensor/port, create a chart
+      Object.keys(device.data).forEach(sensorType => {
+        const sensorArr = device.data[sensorType];
+        if (!sensorArr || !sensorArr.length || !sensorArr[0].readings) return;
+        let readings = sensorArr[0].readings;
+        // Filter readings by date if needed
+        if (dateInput.value) {
+          readings = readings.filter(r => r.datetime >= dateInput.value);
+        }
+        if (!readings.length) return;
+        const sortedReadings = readings.slice().sort((a, b) => a.datetime.localeCompare(b.datetime));
+        const labels = sortedReadings.map(r => r.datetime);
+        const data = sortedReadings.map(r => r.value);
+
+        // Chart block
+        const chartBlock = document.createElement('div');
+        chartBlock.className = 'chart-block';
+        const chartTitle = document.createElement('div');
+        chartTitle.className = 'chart-title';
+        chartTitle.textContent = sensorType;
+        const canvas = document.createElement('canvas');
+        chartBlock.appendChild(chartTitle);
+        chartBlock.appendChild(canvas);
+        tabContent.appendChild(chartBlock);
+
+        // Render chart
+        new Chart(canvas.getContext('2d'), {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: sensorType,
+              data: data,
+              fill: false,
+              borderColor: getRandomColor(),
+              backgroundColor: getRandomColor(),
+              tension: 0.4 // smoother line
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: false },
+              title: { display: false }
+            },
+            scales: {
+              x: { title: { display: true, text: 'Datetime' } },
+              y: { title: { display: true, text: 'Value' }, beginAtZero: false, grace: '5%' }
+            }
           }
         });
-      })
-      .catch(err => {
-        alert("Error fetching or processing data. See console for details.");
-        console.error("Error fetching or processing data:", err);
       });
+    }
+
+    // Initial load: past week
+    loadCharts(getNDaysAgoISO(7));
   </script>
 </body>
 </html>
