@@ -1,164 +1,105 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Device Sensor Charts - All Sites</title>
+  <meta charset="UTF-8">
+  <title>Zentra Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; background: #f9f9f9; }
-    .site-section { background: #fff; margin: 30px auto; padding: 20px; border-radius: 6px; box-shadow: 0 2px 8px rgb(0 0 0 / 0.1); max-width: 900px; }
-    h2 { text-align: center; }
-    .chart-wrapper { margin: 30px 0; }
-    canvas { width: 100% !important; height: 300px !important; }
+    body { font-family: sans-serif; background: #f8f8f8; }
+    #zentraChart { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; }
+    .container { width: 720px; margin: 40px auto; }
+    h1 { text-align: center; }
   </style>
 </head>
 <body>
-  <h2>Device Sensor Charts: All Sites</h2>
-  <div id="sites-container"></div>
-
+  <div class="container">
+    <h1>Zentra Site Sensor Dashboard</h1>
+    <canvas id="zentraChart" width="700" height="450"></canvas>
+  </div>
   <script>
-    const siteMap = {
+    const siteNameMapping = {
       "z6-33252": "Ghost Forest",
       "z6-33251": "Murphy Cemetery",
       "z6-32482": "Nibble Fish Corner",
       "z6-32414": "B & K Styron Yard"
     };
-    const proxyUrl = "https://zentra-proxy.onrender.com/zentra";
+    const deviceSNs = Object.keys(siteNameMapping);
 
-    function parseDateTime(datetimeStr) {
-      return new Date(datetimeStr);
+    // Helper to get a random color for each dataset
+    function getRandomColor() {
+      const r = Math.floor(Math.random() * 200) + 30;
+      const g = Math.floor(Math.random() * 200) + 30;
+      const b = Math.floor(Math.random() * 200) + 30;
+      return `rgba(${r},${g},${b},0.6)`;
     }
 
-    async function fetchSensorReadings(device_sn) {
-      const response = await fetch(`${proxyUrl}?device_sn=${encodeURIComponent(device_sn)}`);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const json = await response.json();
-      return json.data || {};
-    }
-
-    async function renderSiteCharts(device_sn, site_name) {
-      const container = document.getElementById("sites-container");
-      const section = document.createElement("div");
-      section.className = "site-section";
-      section.innerHTML = `<h3>${site_name}</h3>
-        <div class="chart-wrapper"><canvas id="batteryChart_${device_sn}"></canvas></div>
-        <div class="chart-wrapper" id="otherCharts_${device_sn}"></div>`;
-      container.appendChild(section);
-
-      try {
-        const data = await fetchSensorReadings(device_sn);
-
-        // Battery chart
-        const batterySensor = data["Battery Percent"];
-        if (batterySensor && batterySensor[0]?.readings) {
-          const batteryReadings = batterySensor[0].readings;
-          const batteryLabels = batteryReadings.map(r => parseDateTime(r.datetime));
-          const batteryValues = batteryReadings.map(r => r.value);
-
-          const batteryCtx = document.getElementById(`batteryChart_${device_sn}`).getContext("2d");
-          new Chart(batteryCtx, {
-            type: "line",
-            data: {
-              labels: batteryLabels,
-              datasets: [{
-                label: "Battery Percentage (%)",
-                data: batteryValues,
-                fill: false,
-                borderColor: "rgba(75, 192, 192, 1)",
-                backgroundColor: "rgba(75, 192, 192, 0.2)",
-                tension: 0.1,
-                pointRadius: 2,
-                pointHoverRadius: 5,
-              }]
-            },
-            options: {
-              responsive: true,
-              scales: {
-                x: {
-                  type: "time",
-                  time: { tooltipFormat: "PPpp", unit: "hour", displayFormats: { hour: "MMM d, HH:mm" } },
-                  title: { display: true, text: "Timestamp" }
-                },
-                y: {
-                  beginAtZero: true,
-                  max: 100,
-                  title: { display: true, text: "Battery Percentage (%)" }
-                }
-              },
-              plugins: {
-                legend: { display: true },
-                tooltip: { mode: "index", intersect: false }
-              }
-            }
-          });
-        }
-
-        // Other sensors
-        const otherSensorNames = Object.keys(data).filter(name => name !== "Battery Percent");
-        const otherChartsDiv = document.getElementById(`otherCharts_${device_sn}`);
-        otherSensorNames.forEach((sensorName, idx) => {
-          const sensorData = data[sensorName][0];
-          if (!sensorData?.readings) return;
-
-          const readings = sensorData.readings;
-          const labels = readings.map(r => parseDateTime(r.datetime));
-          const values = readings.map(r => r.value);
-          const units = sensorData.metadata?.units || "";
-
-          const wrapper = document.createElement("div");
-          wrapper.className = "chart-wrapper";
-          const title = document.createElement("h4");
-          title.textContent = `${sensorName}${units ? " (" + units + ")" : ""}`;
-          const canvas = document.createElement("canvas");
-          canvas.id = `sensorChart_${device_sn}_${idx}`;
-          wrapper.appendChild(title);
-          wrapper.appendChild(canvas);
-          otherChartsDiv.appendChild(wrapper);
-
-          const ctx = canvas.getContext("2d");
-          new Chart(ctx, {
-            type: "line",
-            data: {
-              labels: labels,
-              datasets: [{
-                label: sensorName + (units ? ` (${units})` : ""),
-                data: values,
-                fill: false,
-                borderColor: "rgba(54, 162, 235, 1)",
-                backgroundColor: "rgba(54, 162, 235, 0.2)",
-                tension: 0.1,
-                pointRadius: 2,
-                pointHoverRadius: 5,
-              }]
-            },
-            options: {
-              responsive: true,
-              scales: {
-                x: {
-                  type: "time",
-                  time: { tooltipFormat: "PPpp", unit: "hour", displayFormats: { hour: "MMM d, HH:mm" } },
-                  title: { display: true, text: "Timestamp" }
-                },
-                y: {
-                  beginAtZero: false,
-                  title: { display: true, text: units ? units : "Value" }
-                }
-              },
-              plugins: {
-                legend: { display: true },
-                tooltip: { mode: "index", intersect: false }
-              }
-            }
-          });
-        });
-      } catch (error) {
-        section.innerHTML += `<div style="color:red;">Error loading data: ${error.message}</div>`;
+    // Fetch data for all devices in parallel
+    Promise.all(
+      deviceSNs.map(sn =>
+        fetch(`https://zentra-proxy.onrender.com/zentra?device_sn=${sn}`)
+          .then(res => res.json())
+          .then(data => {
+            // If API returns array, take first element; else use as is
+            if (Array.isArray(data)) return data[0];
+            return data;
+          })
+          .catch(err => {
+            console.error(`Error fetching data for ${sn}:`, err);
+            return null;
+          })
+      )
+    ).then(devices => {
+      // Remove any nulls (failed fetches)
+      devices = devices.filter(Boolean);
+      if (!devices.length) {
+        alert("No device data available. Check API or network.");
+        return;
       }
-    }
+      console.log("Combined devices data:", devices);
 
-    // Render charts for all sites
-    Object.entries(siteMap).forEach(([device_sn, site_name]) => {
-      renderSiteCharts(device_sn, site_name);
+      // Find all unique sensor keys (excluding device_sn)
+      const sensorKeys = new Set();
+      devices.forEach(device => {
+        Object.keys(device).forEach(key => {
+          if (key !== 'device_sn') sensorKeys.add(key);
+        });
+      });
+
+      // Prepare chart data
+      const labels = devices.map(device => siteNameMapping[device.device_sn] || device.device_sn);
+      const datasets = Array.from(sensorKeys).map(sensor => ({
+        label: sensor,
+        data: devices.map(device => device[sensor] !== undefined ? device[sensor] : null),
+        backgroundColor: getRandomColor(),
+        borderColor: 'rgba(0,0,0,0.1)',
+        borderWidth: 1
+      }));
+
+      // Filter out datasets with all null/undefined
+      const filteredDatasets = datasets.filter(ds => ds.data.some(val => val !== null && val !== undefined));
+
+      // Render chart
+      const ctx = document.getElementById('zentraChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: filteredDatasets
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'top' },
+            title: { display: true, text: 'Sensor Data by Site' }
+          },
+          scales: {
+            y: { beginAtZero: true }
+          }
+        }
+      });
+    }).catch(err => {
+      alert("Error fetching or processing data. See console for details.");
+      console.error("Error fetching or processing data:", err);
     });
   </script>
 </body>
