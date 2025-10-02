@@ -55,20 +55,27 @@
     function getNDaysAgoZentraFormat(days) {
       const d = new Date();
       d.setDate(d.getDate() - days);
-      return d.toISOString().split('T')[0] + ' 00:00';
+      return d.toISOString().split('T')[0] + ' 00:00:00';
     }
-
     function getNDaysAgoInputValue(days) {
       const d = new Date();
       d.setDate(d.getDate() - days);
       return d.toISOString().split('T')[0];
     }
+    function getTodayZentraFormat() {
+      const d = new Date();
+      return d.toISOString().split('T')[0] + ' 23:59:59';
+    }
+    function getTodayInputValue() {
+      return new Date().toISOString().split('T')[0];
+    }
 
-    function loadCharts(startDate = null, siteOverride = null) {
+    function loadCharts(startDate = null, siteOverride = null, endDate = null) {
       const snList = siteOverride ? [siteOverride] : deviceSNs;
-      const url = 'https://zentra-proxy.onrender.com/zentra?' +
-        snList.map(sn => `device_sn=${sn}`).join('&') +
-        (startDate ? `&start_date=${encodeURIComponent(startDate)}` : '');
+      let url = 'https://zentra-proxy.onrender.com/zentra?' +
+        snList.map(sn => `device_sn=${sn}`).join('&');
+      if (startDate) url += `&start_date=${encodeURIComponent(startDate)}`;
+      if (endDate) url += `&end_date=${encodeURIComponent(endDate)}`;
 
       fetch(url)
         .then(res => res.json())
@@ -79,7 +86,6 @@
             return;
           }
 
-          // Build tabs and contents only if loading all
           if (!siteOverride) {
             const tabsDiv = document.getElementById('tabs');
             const tabContentsDiv = document.getElementById('tab-contents');
@@ -89,24 +95,20 @@
             devices.forEach((device, idx) => {
               const siteName = siteNameMapping[device.device_sn] || device.device_sn;
 
-              // Create tab button
               const tabBtn = document.createElement('button');
               tabBtn.className = 'tab' + (idx === 0 ? ' active' : '');
               tabBtn.textContent = siteName;
               tabBtn.dataset.tab = `tab-${device.device_sn}`;
               tabsDiv.appendChild(tabBtn);
 
-              // Create tab content
               const tabContent = document.createElement('div');
               tabContent.className = 'tab-content' + (idx === 0 ? ' active' : '');
               tabContent.id = `tab-${device.device_sn}`;
               tabContentsDiv.appendChild(tabContent);
 
-              // Render controls and charts for this site
-              renderSiteTab(device, tabContent, startDate);
+              renderSiteTab(device, tabContent, startDate, endDate);
             });
 
-            // Tab switching logic
             tabsDiv.addEventListener('click', function(e) {
               if (e.target.classList.contains('tab')) {
                 document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
@@ -116,11 +118,10 @@
               }
             });
           } else {
-            // If only one site is being reloaded, update just that tab content
             const device = devices[0];
             const tabContent = document.getElementById(`tab-${device.device_sn}`);
             tabContent.innerHTML = '';
-            renderSiteTab(device, tabContent, startDate);
+            renderSiteTab(device, tabContent, startDate, endDate);
           }
         })
         .catch(err => {
@@ -129,28 +130,48 @@
         });
     }
 
-    function renderSiteTab(device, tabContent, startDate) {
-      // Controls (date picker + reset)
+    function renderSiteTab(device, tabContent, startDate, endDate) {
+      // Controls (start/end date picker + reset)
       const controls = document.createElement('div');
       controls.className = 'controls';
-      const label = document.createElement('label');
-      label.textContent = "Show data since:";
-      const dateInput = document.createElement('input');
-      dateInput.type = "date";
-      dateInput.value = startDate ? startDate.split(' ')[0] : getNDaysAgoInputValue(7);
-      dateInput.max = new Date().toISOString().split('T')[0];
-      dateInput.onchange = () => {
-        const chosenDate = dateInput.value ? dateInput.value + ' 00:00' : getNDaysAgoZentraFormat(7);
-        loadCharts(chosenDate, device.device_sn);
-      };
-      controls.appendChild(label);
-      controls.appendChild(dateInput);
+
+      // Start date
+      const labelStart = document.createElement('label');
+      labelStart.textContent = "Start:";
+      const dateInputStart = document.createElement('input');
+      dateInputStart.type = "date";
+      dateInputStart.value = startDate ? startDate.split(' ')[0] : getNDaysAgoInputValue(7);
+      dateInputStart.max = getTodayInputValue();
+
+      // End date
+      const labelEnd = document.createElement('label');
+      labelEnd.textContent = "End:";
+      const dateInputEnd = document.createElement('input');
+      dateInputEnd.type = "date";
+      dateInputEnd.value = endDate ? endDate.split(' ')[0] : getTodayInputValue();
+      dateInputEnd.max = getTodayInputValue();
+
+      // On change, reload just this site with the new dates
+      function reloadWithDates() {
+        const chosenStart = dateInputStart.value ? dateInputStart.value + ' 00:00:00' : getNDaysAgoZentraFormat(7);
+        const chosenEnd = dateInputEnd.value ? dateInputEnd.value + ' 23:59:59' : getTodayZentraFormat();
+        loadCharts(chosenStart, device.device_sn, chosenEnd);
+      }
+      dateInputStart.onchange = reloadWithDates;
+      dateInputEnd.onchange = reloadWithDates;
+
+      controls.appendChild(labelStart);
+      controls.appendChild(dateInputStart);
+      controls.appendChild(labelEnd);
+      controls.appendChild(dateInputEnd);
 
       // Reset button
       const resetBtn = document.createElement('button');
       resetBtn.textContent = "Reset to Past Week";
       resetBtn.onclick = () => {
-        loadCharts(getNDaysAgoZentraFormat(7), device.device_sn);
+        dateInputStart.value = getNDaysAgoInputValue(7);
+        dateInputEnd.value = getTodayInputValue();
+        loadCharts(getNDaysAgoZentraFormat(7), device.device_sn, getTodayZentraFormat());
       };
       controls.appendChild(resetBtn);
 
@@ -161,16 +182,20 @@
         const sensorArr = device.data[sensorType];
         if (!sensorArr || !sensorArr.length || !sensorArr[0].readings) return;
         let readings = sensorArr[0].readings;
-        // Filter readings by date if needed
-        if (dateInput.value) {
-          readings = readings.filter(r => r.datetime >= dateInput.value);
+        // Filter readings by date if needed (client-side, for extra safety)
+        if (dateInputStart.value) {
+          const filterStart = dateInputStart.value + ' 00:00:00';
+          readings = readings.filter(r => r.datetime >= filterStart);
+        }
+        if (dateInputEnd.value) {
+          const filterEnd = dateInputEnd.value + ' 23:59:59';
+          readings = readings.filter(r => r.datetime <= filterEnd);
         }
         if (!readings.length) return;
         const sortedReadings = readings.slice().sort((a, b) => a.datetime.localeCompare(b.datetime));
         const labels = sortedReadings.map(r => r.datetime);
         const data = sortedReadings.map(r => r.value);
 
-        // Chart block
         const chartBlock = document.createElement('div');
         chartBlock.className = 'chart-block';
         const chartTitle = document.createElement('div');
@@ -181,7 +206,6 @@
         chartBlock.appendChild(canvas);
         tabContent.appendChild(chartBlock);
 
-        // Render chart
         new Chart(canvas.getContext('2d'), {
           type: 'line',
           data: {
@@ -192,7 +216,7 @@
               fill: false,
               borderColor: getRandomColor(),
               backgroundColor: getRandomColor(),
-              tension: 0.4 // smoother line
+              tension: 0.4
             }]
           },
           options: {
@@ -211,7 +235,7 @@
     }
 
     // Initial load: past week, in ZentraCloud format
-    loadCharts(getNDaysAgoZentraFormat(7));
+    loadCharts(getNDaysAgoZentraFormat(7), null, getTodayZentraFormat());
   </script>
 </body>
 </html>
