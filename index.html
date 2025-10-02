@@ -51,6 +51,7 @@
     fetch('https://zentra-proxy.onrender.com/zentra?' + deviceSNs.map(sn => `device_sn=${sn}`).join('&'))
       .then(res => res.json())
       .then(devices => {
+        console.log("Fetched devices (raw):", devices);
         devices = devices.filter(device => device && !device.error && device.data);
         if (!devices.length) {
           alert("No valid device data available. Check API or network.");
