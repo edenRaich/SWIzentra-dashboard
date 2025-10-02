@@ -25,7 +25,6 @@
     };
     const deviceSNs = Object.keys(siteNameMapping);
 
-    // Helper to get a random color for each dataset
     function getRandomColor() {
       const r = Math.floor(Math.random() * 200) + 30;
       const g = Math.floor(Math.random() * 200) + 30;
@@ -33,7 +32,7 @@
       return `rgba(${r},${g},${b},0.6)`;
     }
 
-    // Fetch data for all devices in parallel
+    // Fetch all device data in parallel
     Promise.all(
       deviceSNs.map(sn =>
         fetch(`https://zentra-proxy.onrender.com/zentra?device_sn=${sn}`)
@@ -49,13 +48,16 @@
           })
       )
     ).then(devices => {
-      // Remove any nulls (failed fetches)
-      devices = devices.filter(Boolean);
+      // Remove any nulls or devices with errors
+      devices = devices.filter(device => device && !device.error);
       if (!devices.length) {
-        alert("No device data available. Check API or network.");
+        alert("No valid device data available. Check API or network.");
         return;
       }
       console.log("Combined devices data:", devices);
+
+      // Prepare labels (site names)
+      const labels = devices.map(device => siteNameMapping[device.device_sn] || device.device_sn);
 
       // Find all unique sensor keys (excluding device_sn)
       const sensorKeys = new Set();
@@ -65,8 +67,7 @@
         });
       });
 
-      // Prepare chart data
-      const labels = devices.map(device => siteNameMapping[device.device_sn] || device.device_sn);
+      // Prepare datasets: one per sensor type
       const datasets = Array.from(sensorKeys).map(sensor => ({
         label: sensor,
         data: devices.map(device => device[sensor] !== undefined ? device[sensor] : null),
