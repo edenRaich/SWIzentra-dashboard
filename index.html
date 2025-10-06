@@ -1,241 +1,185 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Zentra Dashboard - Tabs by Site</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' https://cdn.jsdelivr.net https://unpkg.com;
+    style-src 'self' 'unsafe-inline' https://unpkg.com;
+    img-src 'self' data: https://unpkg.com;
+    object-src 'none';
+    base-uri 'self';
+    form-action 'self';
+  ">
+  <title>Zentra Sites Map & Sensor Data</title>
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    body { font-family: sans-serif; background: #f8f8f8; }
-    .container { width: 900px; margin: 40px auto; }
-    h1 { text-align: center; }
-    .tabs { display: flex; border-bottom: 2px solid #ccc; margin-bottom: 20px; }
-    .tab {
-      padding: 12px 24px;
-      cursor: pointer;
-      background: #eee;
-      border: none;
-      border-radius: 8px 8px 0 0;
-      margin-right: 4px;
-      font-size: 1.1em;
-      transition: background 0.2s;
-    }
-    .tab.active { background: #fff; border-bottom: 2px solid #fff; font-weight: bold; }
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
-    .chart-block { margin-bottom: 40px; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 20px; }
-    .chart-title { text-align: center; margin-bottom: 10px; }
-    .controls { text-align: right; margin-bottom: 10px; }
-    .controls label { margin-right: 8px; }
-    .controls input[type="date"] { font-size: 1em; }
-    .controls button { margin-left: 8px; }
+    #map { height: 400px; margin-bottom: 24px; }
+    .site-title { font-size: 1.2em; font-weight: bold; margin-top: 16px; }
+    .sensor-chart-block { margin-bottom: 40px; }
+    .sensor-title { font-weight: bold; margin-bottom: 4px; margin-top: 16px; }
+    .chart-container { margin-bottom: 32px; }
+    #charts { margin-top: 24px; }
   </style>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- Date adapter for Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
-  <div class="container">
-    <h1>Zentra Site Sensor Dashboard</h1>
-    <div class="tabs" id="tabs"></div>
-    <div id="tab-contents"></div>
-  </div>
+  <h2>Zentra Sites Map & Sensor Data</h2>
+  <div id="map"></div>
+  <div id="charts"></div>
+
   <script>
-    const siteNameMapping = {
-      "z6-33252": "Ghost Forest",
-      "z6-33251": "Murphy Cemetery",
-      "z6-32482": "Tidal Ditch",
-      "z6-32414": "Styron Yard"
-    };
-    const deviceSNs = Object.keys(siteNameMapping);
-
-    function getRandomColor() {
-      const r = Math.floor(Math.random() * 200) + 30;
-      const g = Math.floor(Math.random() * 200) + 30;
-      const b = Math.floor(Math.random() * 200) + 30;
-      return `rgba(${r},${g},${b},0.7)`;
-    }
-
-    function getNDaysAgoZentraFormat(days) {
-      const d = new Date();
-      d.setDate(d.getDate() - days);
-      return d.toISOString().split('T')[0] + ' 00:00:00';
-    }
-    function getNDaysAgoInputValue(days) {
-      const d = new Date();
-      d.setDate(d.getDate() - days);
-      return d.toISOString().split('T')[0];
-    }
-    function getTodayZentraFormat() {
-      const d = new Date();
-      return d.toISOString().split('T')[0] + ' 23:59:59';
-    }
-    function getTodayInputValue() {
-      return new Date().toISOString().split('T')[0];
-    }
-
-    function loadCharts(startDate = null, siteOverride = null, endDate = null) {
-      const snList = siteOverride ? [siteOverride] : deviceSNs;
-      let url = 'https://zentra-proxy.onrender.com/zentra?' +
-        snList.map(sn => `device_sn=${sn}`).join('&');
-      if (startDate) url += `&start_date=${encodeURIComponent(startDate)}`;
-      if (endDate) url += `&end_date=${encodeURIComponent(endDate)}`;
-
-      fetch(url)
-        .then(res => res.json())
-        .then(devices => {
-          devices = devices.filter(device => device && !device.error && device.data);
-          if (!devices.length) {
-            alert("No valid device data available. Check API or network.");
-            return;
-          }
-
-          if (!siteOverride) {
-            const tabsDiv = document.getElementById('tabs');
-            const tabContentsDiv = document.getElementById('tab-contents');
-            tabsDiv.innerHTML = '';
-            tabContentsDiv.innerHTML = '';
-
-            devices.forEach((device, idx) => {
-              const siteName = siteNameMapping[device.device_sn] || device.device_sn;
-
-              const tabBtn = document.createElement('button');
-              tabBtn.className = 'tab' + (idx === 0 ? ' active' : '');
-              tabBtn.textContent = siteName;
-              tabBtn.dataset.tab = `tab-${device.device_sn}`;
-              tabsDiv.appendChild(tabBtn);
-
-              const tabContent = document.createElement('div');
-              tabContent.className = 'tab-content' + (idx === 0 ? ' active' : '');
-              tabContent.id = `tab-${device.device_sn}`;
-              tabContentsDiv.appendChild(tabContent);
-
-              renderSiteTab(device, tabContent, startDate, endDate);
-            });
-
-            tabsDiv.addEventListener('click', function(e) {
-              if (e.target.classList.contains('tab')) {
-                document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-                document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
-                e.target.classList.add('active');
-                document.getElementById(e.target.dataset.tab).classList.add('active');
-              }
-            });
-          } else {
-            const device = devices[0];
-            const tabContent = document.getElementById(`tab-${device.device_sn}`);
-            tabContent.innerHTML = '';
-            renderSiteTab(device, tabContent, startDate, endDate);
-          }
-        })
-        .catch(err => {
-          alert("Error fetching or processing data. See console for details.");
-          console.error("Error fetching or processing data:", err);
-        });
-    }
-
-    function renderSiteTab(device, tabContent, startDate, endDate) {
-      // Controls (start/end date picker + reset)
-      const controls = document.createElement('div');
-      controls.className = 'controls';
-
-      // Start date
-      const labelStart = document.createElement('label');
-      labelStart.textContent = "Start:";
-      const dateInputStart = document.createElement('input');
-      dateInputStart.type = "date";
-      dateInputStart.value = startDate ? startDate.split(' ')[0] : getNDaysAgoInputValue(7);
-      dateInputStart.max = getTodayInputValue();
-
-      // End date
-      const labelEnd = document.createElement('label');
-      labelEnd.textContent = "End:";
-      const dateInputEnd = document.createElement('input');
-      dateInputEnd.type = "date";
-      dateInputEnd.value = endDate ? endDate.split(' ')[0] : getTodayInputValue();
-      dateInputEnd.max = getTodayInputValue();
-
-      // On change, reload just this site with the new dates
-      function reloadWithDates() {
-        const chosenStart = dateInputStart.value ? dateInputStart.value + ' 00:00:00' : getNDaysAgoZentraFormat(7);
-        const chosenEnd = dateInputEnd.value ? dateInputEnd.value + ' 23:59:59' : getTodayZentraFormat();
-        loadCharts(chosenStart, device.device_sn, chosenEnd);
+    // Site/device info
+    const sites = [
+      {
+        name: "Ghost Forest",
+        sn: "z6-33252",
+        lat: 34.7883175,
+        lng: -76.4653989
+      },
+      {
+        name: "Murphy Cemetery",
+        sn: "z6-33251",
+        lat: 34.789873,
+        lng: -76.4655548
+      },
+      {
+        name: "Tidal Ditch",
+        sn: "z6-32482",
+        lat: 34.7855122,
+        lng: -76.4655264
+      },
+      {
+        name: "Styron Yard",
+        sn: "z6-32414",
+        lat: 34.789731,
+        lng: -76.4612296
       }
-      dateInputStart.onchange = reloadWithDates;
-      dateInputEnd.onchange = reloadWithDates;
+    ];
 
-      controls.appendChild(labelStart);
-      controls.appendChild(dateInputStart);
-      controls.appendChild(labelEnd);
-      controls.appendChild(dateInputEnd);
+    // Helper: Choose proxy URL based on environment
+    const baseUrl = (window.location.hostname === 'localhost')
+      ? 'http://localhost:3000'
+      : 'https://zentra-proxy.onrender.com';
 
-      // Reset button
-      const resetBtn = document.createElement('button');
-      resetBtn.textContent = "Reset to Past Week";
-      resetBtn.onclick = () => {
-        dateInputStart.value = getNDaysAgoInputValue(7);
-        dateInputEnd.value = getTodayInputValue();
-        loadCharts(getNDaysAgoZentraFormat(7), device.device_sn, getTodayZentraFormat());
-      };
-      controls.appendChild(resetBtn);
+    // Initialize map
+    const map = L.map('map').setView([34.788, -76.464], 15);
 
-      tabContent.appendChild(controls);
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
 
-      // For each sensor/port, create a chart
-      Object.keys(device.data).forEach(sensorType => {
-        const sensorArr = device.data[sensorType];
-        if (!sensorArr || !sensorArr.length || !sensorArr[0].readings) return;
-        let readings = sensorArr[0].readings;
-        // Filter readings by date if needed (client-side, for extra safety)
-        if (dateInputStart.value) {
-          const filterStart = dateInputStart.value + ' 00:00:00';
-          readings = readings.filter(r => r.datetime >= filterStart);
+    // Add markers for each site
+    sites.forEach(site => {
+      const marker = L.marker([site.lat, site.lng]).addTo(map);
+      marker.bindPopup(`<b>${site.name}</b><br>SN: ${site.sn}`);
+      marker.on('click', () => showSiteData(site));
+    });
+
+    // Store chart instances to destroy them before drawing new ones
+    let chartInstances = [];
+
+    async function showSiteData(site) {
+      document.getElementById('charts').innerHTML = `<div class="site-title">${site.name} (SN: ${site.sn})</div><div>Loading data...</div>`;
+      // Destroy previous charts
+      chartInstances.forEach(chart => chart.destroy());
+      chartInstances = [];
+      try {
+        const url = `${baseUrl}/zentra?device_sn=${site.sn}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Failed to fetch data');
+        const data = await res.json();
+        const device = (data.devices && data.devices[0]) || {};
+        if (!device.data) {
+          document.getElementById('charts').innerHTML = `<div class="site-title">${site.name} (SN: ${site.sn})</div><div>No data available.</div>`;
+          return;
         }
-        if (dateInputEnd.value) {
-          const filterEnd = dateInputEnd.value + ' 23:59:59';
-          readings = readings.filter(r => r.datetime <= filterEnd);
-        }
-        if (!readings.length) return;
-        const sortedReadings = readings.slice().sort((a, b) => a.datetime.localeCompare(b.datetime));
-        const labels = sortedReadings.map(r => r.datetime);
-        const data = sortedReadings.map(r => r.value);
-
-        const chartBlock = document.createElement('div');
-        chartBlock.className = 'chart-block';
-        const chartTitle = document.createElement('div');
-        chartTitle.className = 'chart-title';
-        chartTitle.textContent = sensorType;
-        const canvas = document.createElement('canvas');
-        chartBlock.appendChild(chartTitle);
-        chartBlock.appendChild(canvas);
-        tabContent.appendChild(chartBlock);
-
-        new Chart(canvas.getContext('2d'), {
-          type: 'line',
-          data: {
-            labels: labels,
-            datasets: [{
-              label: sensorType,
-              data: data,
-              fill: false,
-              borderColor: getRandomColor(),
-              backgroundColor: getRandomColor(),
-              tension: 0.4
-            }]
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              legend: { display: false },
-              title: { display: false }
-            },
-            scales: {
-              x: { title: { display: true, text: 'Datetime' } },
-              y: { title: { display: true, text: 'Value' }, beginAtZero: false, grace: '5%' }
+        // Build charts for each sensor
+        let chartsHtml = `<div class="site-title">${site.name} (SN: ${site.sn})</div>`;
+        Object.entries(device.data).forEach(([sensorName, sensorArr]) => {
+          if (Array.isArray(sensorArr) && sensorArr.length > 0) {
+            const readings = sensorArr[0].readings || [];
+            const units = (sensorArr[0].metadata && sensorArr[0].metadata.units) || '';
+            if (readings.length > 0) {
+              const chartId = `chart-${site.sn}-${sensorName.replace(/\s+/g, '_')}`;
+              chartsHtml += `
+                <div class="sensor-chart-block">
+                  <div class="sensor-title">${sensorName} ${units ? '(' + units + ')' : ''}</div>
+                  <canvas id="${chartId}" height="300"></canvas>
+                </div>
+              `;
             }
           }
         });
-      });
+        document.getElementById('charts').innerHTML = chartsHtml;
+
+        // Now render charts
+        Object.entries(device.data).forEach(([sensorName, sensorArr]) => {
+          if (Array.isArray(sensorArr) && sensorArr.length > 0) {
+            const readings = sensorArr[0].readings || [];
+            const units = (sensorArr[0].metadata && sensorArr[0].metadata.units) || '';
+            if (readings.length > 0) {
+              const chartId = `chart-${site.sn}-${sensorName.replace(/\s+/g, '_')}`;
+              const ctx = document.getElementById(chartId).getContext('2d');
+              const chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                  labels: readings.map(r => r.datetime),
+                  datasets: [{
+                    label: sensorName,
+                    data: readings.map(r => r.value),
+                    fill: false,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1
+                  }]
+                },
+                options: {
+                  responsive: true,
+                  scales: {
+                    x: {
+                      type: 'time',
+                      time: {
+                        parser: 'yyyy-MM-dd HH:mm:ssXXX',
+                        tooltipFormat: 'PP HH:mm',
+                        unit: 'hour',
+                        displayFormats: {
+                          hour: 'MMM d, HH:mm'
+                        }
+                      },
+                      title: {
+                        display: true,
+                        text: 'Timestamp'
+                      }
+                    },
+                    y: {
+                      beginAtZero: false,
+                      title: {
+                        display: true,
+                        text: units || sensorName
+                      }
+                    }
+                  },
+                  plugins: {
+                    legend: { display: true },
+                    tooltip: { mode: 'index', intersect: false }
+                  }
+                }
+              });
+              chartInstances.push(chart);
+            }
+          }
+        });
+      } catch (err) {
+        document.getElementById('charts').innerHTML = `<div class="site-title">${site.name} (SN: ${site.sn})</div><div style="color:red;">${err.message}</div>`;
+      }
     }
 
-    // Initial load: past week, in ZentraCloud format
-    loadCharts(getNDaysAgoZentraFormat(7), null, getTodayZentraFormat());
-  </script>
-</body>
-</html>
+  
