@@ -81,6 +81,9 @@
       ? 'http://localhost:3000'
       : 'https://zentra-proxy.onrender.com';
 
+    // Use a very large per_page to get all data in one call
+    const MAX_PER_PAGE = 1000000;
+
     // Initialize map
     const map = L.map('map').setView([34.788, -76.464], 15);
 
@@ -209,7 +212,7 @@
 
       // Otherwise, fetch and cache
       try {
-        const url = `${baseUrl}/zentra?device_sn=${site.sn}`;
+        const url = `${baseUrl}/zentra?device_sn=${site.sn}&per_page=${MAX_PER_PAGE}`;
         const res = await fetch(url);
         if (!res.ok) throw new Error('Failed to fetch data');
         const data = await res.json();
