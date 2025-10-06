@@ -8,7 +8,7 @@
     style-src 'self' 'unsafe-inline' https://unpkg.com;
     img-src 'self' data: https://unpkg.com https://*.tile.openstreetmap.org;
     font-src 'self' https://unpkg.com;
-    connect-src 'self' https://cdn.jsdelivr.net https://unpkg.com;
+    connect-src 'self' https://cdn.jsdelivr.net https://unpkg.com https://zentra-proxy.onrender.com;
     object-src 'none';
     base-uri 'self';
     form-action 'self';
@@ -184,8 +184,9 @@
       }
     }
 
-    // Optionally, show the first site's data on load
-    showSiteData(sites[0]);
+    // Do NOT load any site data on page open.
+    // The charts will only appear after clicking a marker.
+    document.getElementById('charts').innerHTML = `<div style="color: #555; margin-top: 1em;">Click a site marker on the map to view its sensor data.</div>`;
   </script>
 </body>
 </html>
