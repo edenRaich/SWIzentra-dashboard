@@ -19,10 +19,11 @@
   <style>
     #map { height: 400px; margin-bottom: 24px; }
     .site-title { font-size: 1.2em; font-weight: bold; margin-top: 16px; }
-    .sensor-chart-block { margin-bottom: 40px; }
-    .sensor-title { font-weight: bold; margin-bottom: 4px; margin-top: 16px; }
-    .chart-container { margin-bottom: 32px; }
+    .sensor-chart-block { margin-bottom: 24px; }
+    .sensor-title { font-weight: bold; margin-bottom: 4px; margin-top: 8px; }
+    .chart-container { margin-bottom: 16px; }
     #charts { margin-top: 24px; }
+    #range { margin-bottom: 12px; }
   </style>
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -34,7 +35,17 @@
 <body>
   <h2>Zentra Sites Map & Sensor Data</h2>
   <div id="map"></div>
-  <div id="charts"></div>
+  <div>
+    <label for="range">Show data for: </label>
+    <select id="range">
+      <option value="1">Past 24 hours</option>
+      <option value="3">Past 3 days</option>
+      <option value="7" selected>Past week</option>
+      <option value="30">Past month</option>
+      <option value="all">All</option>
+    </select>
+  </div>
+  <div id="charts"><div style="color: #555; margin-top: 1em;">Click a site marker on the map to view its sensor data.</div></div>
 
   <script>
     // Site/device info
@@ -85,108 +96,139 @@
       marker.on('click', () => showSiteData(site));
     });
 
-    // Store chart instances to destroy them before drawing new ones
+    // Caching and chart state
+    let siteDataCache = {};
+    let lastSite = null;
     let chartInstances = [];
 
+    // Helper to filter readings by date range
+    function filterReadings(readings, days) {
+      if (days === 'all') return readings;
+      const now = new Date();
+      const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+      return readings.filter(r => new Date(r.datetime) >= cutoff);
+    }
+
+    // Render charts from cached data
+    function renderCharts(site, device) {
+      const range = document.getElementById('range').value;
+      let chartsHtml = `<div class="site-title">${site.name} (SN: ${site.sn})</div>`;
+      if (!device.data) {
+        document.getElementById('charts').innerHTML = chartsHtml + '<div>No data available.</div>';
+        return;
+      }
+      Object.entries(device.data).forEach(([sensorName, sensorArr]) => {
+        if (Array.isArray(sensorArr) && sensorArr.length > 0) {
+          let readings = sensorArr[0].readings || [];
+          const units = (sensorArr[0].metadata && sensorArr[0].metadata.units) || '';
+          readings = filterReadings(readings, range);
+          if (readings.length > 0) {
+            const chartId = `chart-${site.sn}-${sensorName.replace(/\s+/g, '_')}`;
+            chartsHtml += `
+              <div class="sensor-chart-block">
+                <div class="sensor-title">${sensorName} ${units ? '(' + units + ')' : ''}</div>
+                <canvas id="${chartId}" height="150"></canvas>
+              </div>
+            `;
+          }
+        }
+      });
+      document.getElementById('charts').innerHTML = chartsHtml;
+
+      // Now render charts
+      Object.entries(device.data).forEach(([sensorName, sensorArr]) => {
+        if (Array.isArray(sensorArr) && sensorArr.length > 0) {
+          let readings = sensorArr[0].readings || [];
+          const units = (sensorArr[0].metadata && sensorArr[0].metadata.units) || '';
+          readings = filterReadings(readings, range);
+          if (readings.length > 0) {
+            const chartId = `chart-${site.sn}-${sensorName.replace(/\s+/g, '_')}`;
+            const ctx = document.getElementById(chartId).getContext('2d');
+            const chart = new Chart(ctx, {
+              type: 'line',
+              data: {
+                labels: readings.map(r => r.datetime),
+                datasets: [{
+                  label: sensorName,
+                  data: readings.map(r => r.value),
+                  fill: false,
+                  borderColor: 'rgba(75, 192, 192, 1)',
+                  backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                  tension: 0.1
+                }]
+              },
+              options: {
+                responsive: true,
+                scales: {
+                  x: {
+                    type: 'time',
+                    time: {
+                      parser: 'yyyy-MM-dd HH:mm:ssXXX',
+                      tooltipFormat: 'PP HH:mm',
+                      unit: 'hour',
+                      displayFormats: {
+                        hour: 'MMM d, HH:mm'
+                      }
+                    },
+                    title: {
+                      display: true,
+                      text: 'Timestamp'
+                    }
+                  },
+                  y: {
+                    beginAtZero: false,
+                    title: {
+                      display: true,
+                      text: units || sensorName
+                    }
+                  }
+                },
+                plugins: {
+                  legend: { display: true },
+                  tooltip: { mode: 'index', intersect: false }
+                }
+              }
+            });
+            chartInstances.push(chart);
+          }
+        }
+      });
+    }
+
     async function showSiteData(site) {
+      lastSite = site;
       document.getElementById('charts').innerHTML = `<div class="site-title">${site.name} (SN: ${site.sn})</div><div>Loading data...</div>`;
-      // Destroy previous charts
       chartInstances.forEach(chart => chart.destroy());
       chartInstances = [];
+
+      // If data is cached, use it
+      if (siteDataCache[site.sn]) {
+        renderCharts(site, siteDataCache[site.sn]);
+        return;
+      }
+
+      // Otherwise, fetch and cache
       try {
         const url = `${baseUrl}/zentra?device_sn=${site.sn}`;
         const res = await fetch(url);
         if (!res.ok) throw new Error('Failed to fetch data');
         const data = await res.json();
         const device = (data.devices && data.devices[0]) || {};
-        if (!device.data) {
-          document.getElementById('charts').innerHTML = `<div class="site-title">${site.name} (SN: ${site.sn})</div><div>No data available.</div>`;
-          return;
-        }
-        // Build charts for each sensor
-        let chartsHtml = `<div class="site-title">${site.name} (SN: ${site.sn})</div>`;
-        Object.entries(device.data).forEach(([sensorName, sensorArr]) => {
-          if (Array.isArray(sensorArr) && sensorArr.length > 0) {
-            const readings = sensorArr[0].readings || [];
-            const units = (sensorArr[0].metadata && sensorArr[0].metadata.units) || '';
-            if (readings.length > 0) {
-              const chartId = `chart-${site.sn}-${sensorName.replace(/\s+/g, '_')}`;
-              chartsHtml += `
-                <div class="sensor-chart-block">
-                  <div class="sensor-title">${sensorName} ${units ? '(' + units + ')' : ''}</div>
-                  <canvas id="${chartId}" height="300"></canvas>
-                </div>
-              `;
-            }
-          }
-        });
-        document.getElementById('charts').innerHTML = chartsHtml;
-
-        // Now render charts
-        Object.entries(device.data).forEach(([sensorName, sensorArr]) => {
-          if (Array.isArray(sensorArr) && sensorArr.length > 0) {
-            const readings = sensorArr[0].readings || [];
-            const units = (sensorArr[0].metadata && sensorArr[0].metadata.units) || '';
-            if (readings.length > 0) {
-              const chartId = `chart-${site.sn}-${sensorName.replace(/\s+/g, '_')}`;
-              const ctx = document.getElementById(chartId).getContext('2d');
-              const chart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                  labels: readings.map(r => r.datetime),
-                  datasets: [{
-                    label: sensorName,
-                    data: readings.map(r => r.value),
-                    fill: false,
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    tension: 0.1
-                  }]
-                },
-                options: {
-                  responsive: true,
-                  scales: {
-                    x: {
-                      type: 'time',
-                      time: {
-                        parser: 'yyyy-MM-dd HH:mm:ssXXX',
-                        tooltipFormat: 'PP HH:mm',
-                        unit: 'hour',
-                        displayFormats: {
-                          hour: 'MMM d, HH:mm'
-                        }
-                      },
-                      title: {
-                        display: true,
-                        text: 'Timestamp'
-                      }
-                    },
-                    y: {
-                      beginAtZero: false,
-                      title: {
-                        display: true,
-                        text: units || sensorName
-                      }
-                    }
-                  },
-                  plugins: {
-                    legend: { display: true },
-                    tooltip: { mode: 'index', intersect: false }
-                  }
-                }
-              });
-              chartInstances.push(chart);
-            }
-          }
-        });
+        siteDataCache[site.sn] = device; // Cache it
+        renderCharts(site, device);
       } catch (err) {
         document.getElementById('charts').innerHTML = `<div class="site-title">${site.name} (SN: ${site.sn})</div><div style="color:red;">${err.message}</div>`;
       }
     }
 
-    // Do NOT load any site data on page open.
-    // The charts will only appear after clicking a marker.
-    document.getElementById('charts').innerHTML = `<div style="color: #555; margin-top: 1em;">Click a site marker on the map to view its sensor data.</div>`;
+    // Listen for range changes
+    document.getElementById('range').addEventListener('change', () => {
+      if (lastSite && siteDataCache[lastSite.sn]) {
+        chartInstances.forEach(chart => chart.destroy());
+        chartInstances = [];
+        renderCharts(lastSite, siteDataCache[lastSite.sn]);
+      }
+    });
   </script>
 </body>
 </html>
