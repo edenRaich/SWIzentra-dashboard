@@ -24,7 +24,7 @@
     .chart-container { margin-bottom: 16px; }
     #charts { margin-top: 24px; }
     #range { margin-bottom: 12px; }
-    #custom-date { margin-left: 8px; }
+    .error-message { color: red; margin-top: 1em; }
   </style>
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -42,41 +42,17 @@
       <option value="1">Past 24 hours</option>
       <option value="3">Past 3 days</option>
       <option value="7" selected>Past week</option>
-      <option value="30">Past month</option>
-      <option value="all">All</option>
-      <option value="custom">Custom...</option>
     </select>
-    <input type="date" id="custom-date" style="display:none;" />
   </div>
   <div id="charts"><div style="color: #555; margin-top: 1em;">Click a site marker on the map to view its sensor data.</div></div>
 
   <script>
     // Site/device info
     const sites = [
-      {
-        name: "Ghost Forest",
-        sn: "z6-33252",
-        lat: 34.7883175,
-        lng: -76.4653989
-      },
-      {
-        name: "Murphy Cemetery",
-        sn: "z6-33251",
-        lat: 34.789873,
-        lng: -76.4655548
-      },
-      {
-        name: "Tidal Ditch",
-        sn: "z6-32482",
-        lat: 34.7855122,
-        lng: -76.4655264
-      },
-      {
-        name: "Styron Yard",
-        sn: "z6-32414",
-        lat: 34.789731,
-        lng: -76.4612296
-      }
+      { name: "Ghost Forest", sn: "z6-33252", lat: 34.7883175, lng: -76.4653989 },
+      { name: "Murphy Cemetery", sn: "z6-33251", lat: 34.789873, lng: -76.4655548 },
+      { name: "Tidal Ditch", sn: "z6-32482", lat: 34.7855122, lng: -76.4655264 },
+      { name: "Styron Yard", sn: "z6-32414", lat: 34.789731, lng: -76.4612296 }
     ];
 
     // Helper: Choose proxy URL based on environment
@@ -84,13 +60,14 @@
       ? 'http://localhost:3000'
       : 'https://zentra-proxy.onrender.com';
 
-    // Use a very large per_page to get all data in one call (limited by Zentra API)
     const MAX_PER_PAGE = 1000000;
+    let siteDataCache = {}; // { [sn]: deviceData }
+    let lastSite = null;
+    let chartInstances = [];
+    let apiError = false;
 
     // Initialize map
     const map = L.map('map').setView([34.788, -76.464], 15);
-
-    // Add OpenStreetMap tiles
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors'
     }).addTo(map);
@@ -102,26 +79,15 @@
       marker.on('click', () => showSiteData(site));
     });
 
-    // Caching and chart state
-    let siteDataCache = {};
-    let lastSite = null;
-    let chartInstances = [];
-
-    // Range and custom date elements
-    const rangeSelect = document.getElementById('range');
-    const customDateInput = document.getElementById('custom-date');
-
-    // Helper to filter readings by date range (for "all", no filter; for custom, handled by API)
+    // Helper to filter readings by date range
     function filterReadings(readings, days) {
-      if (days === 'all' || days === 'custom') return readings;
       const now = new Date();
       const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
       return readings.filter(r => new Date(r.datetime) >= cutoff);
     }
 
-    // Render charts from cached data
     function renderCharts(site, device) {
-      const range = rangeSelect.value;
+      const range = document.getElementById('range').value;
       let chartsHtml = `<div class="site-title">${site.name} (SN: ${site.sn})</div>`;
       if (!device.data) {
         document.getElementById('charts').innerHTML = chartsHtml + '<div>No data available.</div>';
@@ -131,7 +97,7 @@
         if (Array.isArray(sensorArr) && sensorArr.length > 0) {
           let readings = sensorArr[0].readings || [];
           const units = (sensorArr[0].metadata && sensorArr[0].metadata.units) || '';
-          readings = filterReadings(readings, range);
+          readings = filterReadings(readings, parseInt(range, 10));
           if (readings.length > 0) {
             const chartId = `chart-${site.sn}-${sensorName.replace(/\s+/g, '_')}`;
             chartsHtml += `
@@ -150,7 +116,7 @@
         if (Array.isArray(sensorArr) && sensorArr.length > 0) {
           let readings = sensorArr[0].readings || [];
           const units = (sensorArr[0].metadata && sensorArr[0].metadata.units) || '';
-          readings = filterReadings(readings, range);
+          readings = filterReadings(readings, parseInt(range, 10));
           if (readings.length > 0) {
             const chartId = `chart-${site.sn}-${sensorName.replace(/\s+/g, '_')}`;
             const ctx = document.getElementById(chartId).getContext('2d');
@@ -205,13 +171,37 @@
       });
     }
 
-    // Show/hide date picker for custom range
-    rangeSelect.addEventListener('change', () => {
-      if (rangeSelect.value === 'custom') {
-        customDateInput.style.display = '';
+    // Show user-friendly error if API failed
+    function showApiError() {
+      document.getElementById('charts').innerHTML =
+        `<div class="error-message">
+          Unable to load data from Zentra API (call limit reached or network error).<br>
+          Please try again later.
+        </div>`;
+    }
+
+    // Show data for a site (from cache)
+    function showSiteData(site) {
+      lastSite = site;
+      chartInstances.forEach(chart => chart.destroy());
+      chartInstances = [];
+      if (apiError) {
+        showApiError();
+        return;
+      }
+      if (siteDataCache[site.sn]) {
+        renderCharts(site, siteDataCache[site.sn]);
       } else {
-        customDateInput.style.display = 'none';
-        customDateInput.value = '';
+        document.getElementById('charts').innerHTML =
+          `<div class="site-title">${site.name} (SN: ${site.sn})</div><div>No data available.</div>`;
+      }
+    }
+
+    // Listen for range changes
+    document.getElementById('range').addEventListener('change', () => {
+      if (apiError) {
+        showApiError();
+        return;
       }
       if (lastSite && siteDataCache[lastSite.sn]) {
         chartInstances.forEach(chart => chart.destroy());
@@ -220,58 +210,36 @@
       }
     });
 
-    // When custom date changes, reload data
-    customDateInput.addEventListener('change', () => {
-      if (lastSite) {
-        delete siteDataCache[lastSite.sn];
-        showSiteData(lastSite);
-      }
-    });
+    // Fetch all site data on load (default: past week)
+    async function fetchAllSiteDataOnLoad() {
+      const range = document.getElementById('range').value;
+      const days = parseInt(range, 10);
+      const now = new Date();
+      const start = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+      const startDate = start.toISOString().slice(0,10);
 
-    // Listen for range changes (non-custom)
-    rangeSelect.addEventListener('change', () => {
-      if (rangeSelect.value !== 'custom' && lastSite) {
-        delete siteDataCache[lastSite.sn];
-        showSiteData(lastSite);
-      }
-    });
-
-    async function showSiteData(site) {
-      lastSite = site;
-      document.getElementById('charts').innerHTML = `<div class="site-title">${site.name} (SN: ${site.sn})</div><div>Loading data...</div>`;
-      chartInstances.forEach(chart => chart.destroy());
-      chartInstances = [];
-
-      // If data is cached, use it
-      if (siteDataCache[site.sn]) {
-        renderCharts(site, siteDataCache[site.sn]);
-        return;
-      }
+      // Build a comma-separated list of SNs
+      const sns = sites.map(site => site.sn).join(',');
+      const url = `${baseUrl}/zentra?device_sn=${sns}&per_page=${MAX_PER_PAGE}&start_date=${startDate}`;
 
       try {
-        let url = `${baseUrl}/zentra?device_sn=${site.sn}&per_page=${MAX_PER_PAGE}`;
-        // If custom date, add start_date param
-        if (rangeSelect.value === 'custom' && customDateInput.value) {
-          url += `&start_date=${customDateInput.value}`;
-        } else if (rangeSelect.value !== 'all' && rangeSelect.value !== 'custom') {
-          // For preset ranges, calculate start_date
-          const days = parseInt(rangeSelect.value, 10);
-          if (!isNaN(days)) {
-            const now = new Date();
-            const start = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-            url += `&start_date=${start.toISOString().slice(0,10)}`;
-          }
-        }
         const res = await fetch(url);
-        if (!res.ok) throw new Error('Failed to fetch data');
+        if (!res.ok) throw new Error('API error');
         const data = await res.json();
-        const device = (data.devices && data.devices[0]) || {};
-        siteDataCache[site.sn] = device; // Cache it
-        renderCharts(site, device);
+        if (data.devices && Array.isArray(data.devices)) {
+          data.devices.forEach(device => {
+            siteDataCache[device.device_sn] = device;
+          });
+        }
       } catch (err) {
-        document.getElementById('charts').innerHTML = `<div class="site-title">${site.name} (SN: ${site.sn})</div><div style="color:red;">${err.message}</div>`;
+        apiError = true;
+        showApiError();
       }
     }
+
+    // On page load, fetch all data
+    fetchAllSiteDataOnLoad();
+
   </script>
 </body>
 </html>
