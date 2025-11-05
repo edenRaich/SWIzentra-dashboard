@@ -13,13 +13,65 @@
     base-uri 'self';
     form-action 'self';
   ">
-  <title>Zentra Sites Map & Sensor Data</title>
+  <title>Down East Salt Water Intrusion Monitoring System</title>
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    #map { height: 400px; margin-bottom: 24px; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f8fafc;
+      margin: 0;
+      padding: 0;
+    }
+    .main-title {
+      font-size: 2.2em;
+      font-weight: bold;
+      text-align: center;
+      margin: 32px 0 18px 0;
+      letter-spacing: 1px;
+      color: #1e293b;
+    }
+    .top-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 32px;
+      margin-bottom: 18px;
+    }
+    #map {
+      width: 350px;
+      height: 300px;
+      border-radius: 10px;
+      border: 2px solid #cbd5e1;
+      box-shadow: 0 2px 8px #0001;
+      margin-bottom: 0;
+      background: #e0e7ef;
+    }
+    .blurb {
+      min-width: 260px;
+      max-width: 400px;
+      background: #fff;
+      border: 2px solid #64748b;
+      border-radius: 10px;
+      padding: 22px 18px;
+      font-size: 1.08em;
+      color: #334155;
+      box-shadow: 0 2px 8px #0001;
+      margin-bottom: 0;
+    }
+    @media (max-width: 800px) {
+      .top-row {
+        flex-direction: column;
+        align-items: center;
+      }
+      #map, .blurb {
+        width: 95vw;
+        max-width: 98vw;
+      }
+    }
     .site-title { font-size: 1.2em; font-weight: bold; margin-top: 16px; }
-    .sensor-chart-block { margin-bottom: 24px; }
+    .sensor-chart-block { margin-bottom: 12px; }
     .sensor-title { font-weight: bold; margin-bottom: 4px; margin-top: 8px; }
     .chart-container { margin-bottom: 16px; }
     #charts { margin-top: 24px; }
@@ -27,6 +79,23 @@
     .error-message { color: red; margin-top: 1em; }
     .controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
     .loading { color: #666; margin-top: 8px; }
+    .site-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .miniChart {
+      width: 100%;
+      height: 120px !important;
+      max-height: 120px;
+    }
+    .combinedChart {
+      width: 100%;
+      height: 220px !important;
+      max-height: 220px;
+      margin-bottom: 24px;
+    }
   </style>
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -36,8 +105,15 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
-  <h2>Zentra Sites Map & Sensor Data</h2>
-  <div id="map"></div>
+  <div class="main-title">Down East Salt Water Intrusion Monitoring System</div>
+  <div class="top-row">
+    <div id="map"></div>
+    <div class="blurb">
+      <strong>About this project:</strong><br>
+      This interactive dashboard displays real-time water level, temperature, and conductivity data from monitoring sites in Down East, North Carolina. The system helps track saltwater intrusion and its impact on local ecosystems.<br><br>
+      <em>Select a site on the map or from the dropdown to view detailed sensor trends.</em>
+    </div>
+  </div>
   <div class="controls">
     <label for="range">Show data for: </label>
     <select id="range">
@@ -62,6 +138,14 @@
       { name: "Styron Yard", sn: "z6-32414", lat: 34.789731, lng: -76.4612296 }
     ];
 
+    // Brand colors per site
+    const siteColors = {
+      "Tidal Ditch": { line: "#1e3a8a", fill: "#1e3a8a33", marker: "#1e3a8a" }, // dark blue
+      "Murphy Cemetery": { line: "#6b7280", fill: "#6b728033", marker: "#6b7280" }, // grey
+      "Ghost Forest": { line: "#10b981", fill: "#10b98133", marker: "#10b981" }, // green
+      "Styron Yard": { line: "#f59e0b", fill: "#f59e0b33", marker: "#f59e0b" }  // yellow
+    };
+
     // Helper: Choose proxy URL based on environment
     const baseUrl = (window.location.hostname === 'localhost')
       ? 'http://localhost:3000'
@@ -77,15 +161,61 @@
     let chartInstances = [];
     let apiError = false;
 
+    // Sensor keys to look for (case-insensitive match)
+    const SENSOR_KEYS = [
+      { key: "Water Level", aliases: ["Water Level", "Level"], type: "level" },
+      { key: "Water Temperature", aliases: ["Water Temperature", "Temperature"], type: "temp" },
+      { key: "Conductivity", aliases: ["Conductivity", "EC"], type: "ec" }
+    ];
+
+    // Conversion helpers
+    function toFeet(value, unit) {
+      if (unit) {
+        unit = unit.toLowerCase();
+        if (unit.includes("meter")) return value * 3.28084;
+        if (unit.includes("centimeter") || unit === "cm") return value * 0.0328084;
+        if (unit.includes("feet") || unit === "foot" || unit === "ft") return value;
+      }
+      return value; // fallback, assume already feet
+    }
+    function toFahrenheit(value, unit) {
+      if (unit && unit.toLowerCase().includes("c")) return value * 9/5 + 32;
+      return value;
+    }
+    function toMsPerInch(value, unit) {
+      if (unit && unit.toLowerCase().includes("mS/cm".toLowerCase())) return value * 2.54;
+      if (unit && unit.toLowerCase().includes("µs/cm")) return (value / 1000) * 2.54;
+      if (unit && unit.toLowerCase().includes("ms/inch")) return value;
+      return value; // fallback
+    }
+
     // Initialize map with ArcGIS satellite tiles
     const map = L.map('map').setView([34.788, -76.464], 15);
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       attribution: 'Tiles © Esri'
     }).addTo(map);
 
-    // Add markers for each site
+    // Simple colored circle marker
+    function coloredCircle(color) {
+      return L.circleMarker([0,0], {
+        radius: 8,
+        color: color,
+        weight: 2,
+        fillColor: color,
+        fillOpacity: 0.8
+      });
+    }
+
+    // Add markers for each site with color
     sites.forEach(site => {
-      const marker = L.marker([site.lat, site.lng]).addTo(map);
+      const color = siteColors[site.name]?.marker || "#3b82f6";
+      const marker = L.circleMarker([site.lat, site.lng], {
+        radius: 8,
+        color: color,
+        weight: 2,
+        fillColor: color,
+        fillOpacity: 0.8
+      }).addTo(map);
       marker.bindPopup(`<b>${site.name}</b><br>SN: ${site.sn}<br><small>Click to load data</small>`);
       marker.on('click', () => fetchAndShowSite(site));
     });
@@ -116,56 +246,96 @@
       chartInstances = [];
     }
 
+    // Find sensor key in device.data by aliases
+    function findSensorKey(data, aliases) {
+      for (const key of Object.keys(data)) {
+        for (const alias of aliases) {
+          if (key.toLowerCase().includes(alias.toLowerCase())) return key;
+        }
+      }
+      return null;
+    }
+
     function renderCharts(site, device) {
       const range = document.getElementById('range').value;
+      const siteColor = siteColors[site.name] || { line: '#3b82f6', fill: '#3b82f633' };
+
       let chartsHtml = `<div class="site-title">${site.name} (SN: ${site.sn})</div>`;
       if (!device || !device.data) {
         document.getElementById('charts').innerHTML = chartsHtml + '<div>No data available.</div>';
         return;
       }
-      Object.entries(device.data).forEach(([sensorName, sensorArr]) => {
-        if (Array.isArray(sensorArr) && sensorArr.length > 0) {
-          let readings = sensorArr[0].readings || [];
-          const units = (sensorArr[0].metadata && sensorArr[0].metadata.units) || '';
+
+      // Prepare per-site mini charts
+      chartsHtml += `<div class="site-grid">`;
+      SENSOR_KEYS.forEach(sensor => {
+        const key = findSensorKey(device.data, sensor.aliases);
+        if (key && Array.isArray(device.data[key]) && device.data[key].length > 0) {
+          let readings = device.data[key][0].readings || [];
+          const units = (device.data[key][0].metadata && device.data[key][0].metadata.units) || '';
           readings = filterReadings(readings, parseInt(range, 10));
           if (readings.length > 0) {
-            const chartId = `chart-${site.sn}-${sensorName.replace(/\s+/g, '_')}`;
+            const chartId = `chart-${site.sn}-${sensor.type}`;
             chartsHtml += `
               <div class="sensor-chart-block">
-                <div class="sensor-title">${sensorName} ${units ? '(' + units + ')' : ''}</div>
-                <canvas id="${chartId}" height="150"></canvas>
+                <div class="sensor-title">${sensor.key} (${sensor.type === "level" ? "ft" : sensor.type === "temp" ? "°F" : "mS/inch"})</div>
+                <canvas id="${chartId}" class="miniChart"></canvas>
               </div>
             `;
           }
         }
       });
+      chartsHtml += `</div>`;
+
+      // Combined charts placeholders
+      chartsHtml += `
+        <div class="site-title" style="margin-top:24px;">All Sites - Water Temperature (°F)</div>
+        <canvas id="combined-temp" class="combinedChart"></canvas>
+        <div class="site-title">All Sites - Conductivity (mS/inch)</div>
+        <canvas id="combined-ec" class="combinedChart"></canvas>
+      `;
+
       document.getElementById('charts').innerHTML = chartsHtml;
 
-      // Now render charts
-      Object.entries(device.data).forEach(([sensorName, sensorArr]) => {
-        if (Array.isArray(sensorArr) && sensorArr.length > 0) {
-          let readings = sensorArr[0].readings || [];
-          const units = (sensorArr[0].metadata && sensorArr[0].metadata.units) || '';
+      // Render per-site mini charts (use site color)
+      SENSOR_KEYS.forEach(sensor => {
+        const key = findSensorKey(device.data, sensor.aliases);
+        if (key && Array.isArray(device.data[key]) && device.data[key].length > 0) {
+          let readings = device.data[key][0].readings || [];
+          const units = (device.data[key][0].metadata && device.data[key][0].metadata.units) || '';
           readings = filterReadings(readings, parseInt(range, 10));
           if (readings.length > 0) {
-            const chartId = `chart-${site.sn}-${sensorName.replace(/\s+/g, '_')}`;
+            // Convert values
+            let values, label;
+            if (sensor.type === "level") {
+              values = readings.map(r => toFeet(r.value, units));
+              label = "Water Level (ft)";
+            } else if (sensor.type === "temp") {
+              values = readings.map(r => toFahrenheit(r.value, units));
+              label = "Water Temperature (°F)";
+            } else if (sensor.type === "ec") {
+              values = readings.map(r => toMsPerInch(r.value, units));
+              label = "Conductivity (mS/inch)";
+            }
+            const chartId = `chart-${site.sn}-${sensor.type}`;
             const ctx = document.getElementById(chartId).getContext('2d');
             const chart = new Chart(ctx, {
               type: 'line',
               data: {
                 labels: readings.map(r => r.datetime),
                 datasets: [{
-                  label: sensorName,
-                  data: readings.map(r => r.value),
+                  label: label,
+                  data: values,
                   fill: false,
-                  borderColor: 'rgba(75, 192, 192, 1)',
-                  backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                  borderColor: siteColor.line,
+                  backgroundColor: siteColor.fill,
                   tension: 0.1,
                   pointRadius: 0
                 }]
               },
               options: {
                 responsive: true,
+                plugins: { legend: { display: false } },
                 scales: {
                   x: {
                     type: 'time',
@@ -175,16 +345,12 @@
                       unit: 'hour',
                       displayFormats: { hour: 'MMM d, HH:mm' }
                     },
-                    title: { display: true, text: 'Timestamp' }
+                    title: { display: false }
                   },
                   y: {
                     beginAtZero: false,
-                    title: { display: true, text: units || sensorName }
+                    title: { display: false }
                   }
-                },
-                plugins: {
-                  legend: { display: true },
-                  tooltip: { mode: 'index', intersect: false }
                 },
                 animation: false
               }
@@ -193,6 +359,122 @@
           }
         }
       });
+
+      // Render combined charts for all sites
+      renderCombinedCharts();
+    }
+
+    // Gather and plot combined charts for all sites (use per-site colors)
+    async function renderCombinedCharts() {
+      const range = document.getElementById('range').value;
+      const tempDatasets = [];
+      const ecDatasets = [];
+
+      for (const site of sites) {
+        const color = siteColors[site.name] || { line: '#3b82f6', fill: '#3b82f633' };
+
+        // Try cache first
+        let device = getFreshFromClientCache(site.sn);
+        if (!device) {
+          try {
+            const { perPage, startDate } = getDateRangeParams();
+            device = await fetchDeviceFromProxy(site.sn, perPage, startDate);
+            clientCache.set(site.sn, { device, fetchedAtMs: Date.now() });
+          } catch (e) { continue; }
+        }
+        // Water Temp
+        const tempKey = findSensorKey(device.data, ["Water Temperature", "Temperature"]);
+        if (tempKey && Array.isArray(device.data[tempKey]) && device.data[tempKey].length > 0) {
+          let readings = device.data[tempKey][0].readings || [];
+          const units = (device.data[tempKey][0].metadata && device.data[tempKey][0].metadata.units) || '';
+          readings = filterReadings(readings, parseInt(range, 10));
+          if (readings.length > 0) {
+            tempDatasets.push({
+              label: site.name,
+              data: readings.map(r => ({ x: r.datetime, y: toFahrenheit(r.value, units) })),
+              borderColor: color.line,
+              backgroundColor: color.fill,
+              fill: false,
+              tension: 0.1,
+              pointRadius: 0
+            });
+          }
+        }
+        // EC
+        const ecKey = findSensorKey(device.data, ["Conductivity", "EC"]);
+        if (ecKey && Array.isArray(device.data[ecKey]) && device.data[ecKey].length > 0) {
+          let readings = device.data[ecKey][0].readings || [];
+          const units = (device.data[ecKey][0].metadata && device.data[ecKey][0].metadata.units) || '';
+          readings = filterReadings(readings, parseInt(range, 10));
+          if (readings.length > 0) {
+            ecDatasets.push({
+              label: site.name,
+              data: readings.map(r => ({ x: r.datetime, y: toMsPerInch(r.value, units) })),
+              borderColor: color.line,
+              backgroundColor: color.fill,
+              fill: false,
+              tension: 0.1,
+              pointRadius: 0
+            });
+          }
+        }
+      }
+
+      // Water Temp Combined Chart
+      const tempCtx = document.getElementById('combined-temp').getContext('2d');
+      chartInstances.push(new Chart(tempCtx, {
+        type: 'line',
+        data: { datasets: tempDatasets },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: true } },
+          scales: {
+            x: {
+              type: 'time',
+              time: {
+                parser: 'yyyy-MM-dd HH:mm:ssXXX',
+                tooltipFormat: 'PP HH:mm',
+                unit: 'hour',
+                displayFormats: { hour: 'MMM d, HH:mm' }
+              },
+              title: { display: true, text: 'Timestamp' }
+            },
+            y: {
+              beginAtZero: false,
+              title: { display: true, text: 'Water Temperature (°F)' }
+            }
+          },
+          animation: false
+        }
+      }));
+
+      // EC Combined Chart
+      const ecCtx = document.getElementById('combined-ec').getContext('2d');
+      chartInstances.push(new Chart(ecCtx, {
+        type: 'line',
+        data: { datasets: ecDatasets },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: true } },
+          scales: {
+            x: {
+              type: 'time',
+              time: {
+                parser: 'yyyy-MM-dd HH:mm:ssXXX',
+                tooltipFormat: 'PP HH:mm',
+                unit: 'hour',
+                displayFormats: { hour: 'MMM d, HH:mm' }
+              },
+              title: { display: true, text: 'Timestamp' }
+            },
+            y: {
+              beginAtZero: false,
+              title: { display: true, text: 'Conductivity (mS/inch)' }
+            }
+          },
+          animation: false
+        }
+      }));
     }
 
     function showApiError(message) {
@@ -294,7 +576,6 @@
     // When range changes, if a site is selected, refetch that site (so server-side cache respects new time window)
     document.getElementById('range').addEventListener('change', () => {
       if (!lastSite) return;
-      // Invalidate client cache for that site so we refetch fresh for the new range
       clientCache.delete(lastSite.sn);
       fetchAndShowSite(lastSite);
     });
