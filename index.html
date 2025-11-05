@@ -77,10 +77,10 @@
     let chartInstances = [];
     let apiError = false;
 
-    // Initialize map
+    // Initialize map with satellite tiles
     const map = L.map('map').setView([34.788, -76.464], 15);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles © Esri'
     }).addTo(map);
 
     // Add markers for each site
@@ -299,7 +299,8 @@
       fetchAndShowSite(lastSite);
     });
 
- 
+    // Optionally, choose an initial site to show by default:
+    // fetchAndShowSite(sites[0]);
   </script>
 </body>
 </html>
