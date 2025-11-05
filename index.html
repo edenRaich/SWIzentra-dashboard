@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="
     default-src 'self';
     script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com;
     style-src 'self' 'unsafe-inline' https://unpkg.com;
@@ -13,138 +14,180 @@
     base-uri 'self';
     form-action 'self';
   ">
-  <title>Down East Salt Water Intrusion Monitoring System</title>
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <style>
-    body {
-      font-family: 'Segoe UI', Arial, sans-serif;
-      background: #f8fafc;
-      margin: 0;
-      padding: 0;
-    }
-    .main-title {
-      font-size: 2.2em;
-      font-weight: bold;
-      text-align: center;
-      margin: 32px 0 18px 0;
-      letter-spacing: 1px;
-      color: #1e293b;
-    }
-    .top-row {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      align-items: flex-start;
-      gap: 32px;
-      margin-bottom: 18px;
-    }
-    #map {
-      width: 350px;
-      height: 300px;
-      border-radius: 10px;
-      border: 2px solid #cbd5e1;
-      box-shadow: 0 2px 8px #0001;
-      margin-bottom: 0;
-      background: #e0e7ef;
-    }
-    .blurb {
-      min-width: 260px;
-      max-width: 400px;
-      background: #fff;
-      border: 2px solid #64748b;
-      border-radius: 10px;
-      padding: 22px 18px;
-      font-size: 1.08em;
-      color: #334155;
-      box-shadow: 0 2px 8px #0001;
-      margin-bottom: 0;
-    }
-    @media (max-width: 800px) {
-      .top-row {
-        flex-direction: column;
-        align-items: center;
-      }
-      #map, .blurb {
-        width: 95vw;
-        max-width: 98vw;
-      }
-    }
-    .site-title { font-size: 1.2em; font-weight: bold; margin-top: 16px; }
-    .sensor-chart-block { margin-bottom: 12px; }
-    .sensor-title { font-weight: bold; margin-bottom: 4px; margin-top: 8px; }
-    .chart-container { margin-bottom: 16px; }
-    #charts { margin-top: 24px; }
-    #range { margin-bottom: 12px; }
-    .error-message { color: red; margin-top: 1em; }
-    .controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-    .loading { color: #666; margin-top: 8px; }
-    .site-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 12px;
-      margin-bottom: 24px;
-    }
-    .miniChart {
-      width: 100%;
-      height: 120px !important;
-      max-height: 120px;
-    }
-    .combinedChart {
-      width: 100%;
-      height: 220px !important;
-      max-height: 220px;
-      margin-bottom: 24px;
-    }
-  </style>
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <!-- Date adapter for Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-  <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <title>Down East Salt Water Intrusion Monitoring System</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f8fafc;
+            margin: 0;
+            padding: 0;
+        }
+
+        .main-title {
+            font-size: 2.2em;
+            font-weight: bold;
+            text-align: center;
+            margin: 32px 0 18px 0;
+            letter-spacing: 1px;
+            color: #1e293b;
+        }
+
+        .top-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 32px;
+            margin-bottom: 18px;
+        }
+
+        #map {
+            width: 500px;
+            height: 380px;
+            border-radius: 10px;
+            border: 2px solid #cbd5e1;
+            box-shadow: 0 2px 8px #0001;
+            margin-bottom: 0;
+            background: #e0e7ef;
+        }
+
+        .blurb {
+            min-width: 260px;
+            max-width: 400px;
+            min-height: 120px;
+            background: #fff;
+            border: 2px solid #64748b;
+            border-radius: 10px;
+            padding: 22px 18px;
+            font-size: 1.08em;
+            color: #334155;
+            box-shadow: 0 2px 8px #0001;
+            margin-bottom: 0;
+        }
+
+        @media (max-width: 1100px) {
+            .top-row {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            #map,
+            .blurb {
+                width: 95vw;
+                max-width: 98vw;
+            }
+        }
+
+        .site-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-top: 16px;
+        }
+
+        .sensor-chart-block {
+            margin-bottom: 12px;
+        }
+
+        .sensor-title {
+            font-weight: bold;
+            margin-bottom: 4px;
+            margin-top: 8px;
+        }
+
+        .chart-container {
+            margin-bottom: 16px;
+        }
+
+        #charts {
+            margin-top: 24px;
+        }
+
+        #range {
+            margin-bottom: 12px;
+        }
+
+        .error-message {
+            color: red;
+            margin-top: 1em;
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .loading {
+            color: #666;
+            margin-top: 8px;
+        }
+
+        .site-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .miniChart {
+            width: 100%;
+            height: 170px !important;
+            max-height: 170px;
+        }
+
+        .combinedChart {
+            width: 100%;
+            height: 280px !important;
+            max-height: 280px;
+            margin-bottom: 24px;
+        }
+    </style>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <!-- Date adapter for Chart.js -->
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js">
+    </script>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
+
 <body>
-  <div class="main-title">Down East Salt Water Intrusion Monitoring System</div>
-  <div class="top-row">
-    <div id="map"></div>
-    <div class="blurb">
-      <strong>About this project:</strong><br>
-      This interactive dashboard displays real-time water level, temperature, and conductivity data from monitoring sites in Down East, North Carolina. The system helps track saltwater intrusion and its impact on local ecosystems.<br><br>
-      <em>Select a site on the map or from the dropdown to view detailed sensor trends.</em>
+    <div class="main-title">Down East Salt Water Intrusion Monitoring System</div>
+    <div class="top-row">
+        <div id="map"></div>
+        <div class="blurb"></div>
     </div>
-  </div>
-  <div class="controls">
-    <label for="range">Show data for: </label>
-    <select id="range">
+    <div class="controls">
+        <label for="range">Show data for: </label>
+        <select id="range">
       <option value="1">Past 24 hours</option>
       <option value="3">Past 3 days</option>
       <option value="7" selected>Past week</option>
     </select>
-    <label for="siteSelect">Select site:</label>
-    <select id="siteSelect">
+        <label for="siteSelect">Select site:</label>
+        <select id="siteSelect">
       <option value="">-- Choose a site or click a marker --</option>
     </select>
-    <button id="fetchSelected">Fetch selected site</button>
-  </div>
-  <div id="charts"><div style="color: #555; margin-top: 1em;">Click a site marker on the map (or choose from the dropdown) to load its sensor data.</div></div>
+        <button id="fetchSelected">Show selected site</button>
+    </div>
+    <div id="charts">
+        <div style="color: #555; margin-top: 1em;">Loading all sites...</div>
+        <div id="perSiteCharts"></div>
+        <div id="combinedCharts"></div>
+    </div>
 
-  <script>
-    // Site/device info
+    <script>
+        // Site/device info
     const sites = [
-      { name: "Ghost Forest", sn: "z6-33252", lat: 34.7883175, lng: -76.4653989 },
-      { name: "Murphy Cemetery", sn: "z6-33251", lat: 34.789873, lng: -76.4655548 },
-      { name: "Tidal Ditch", sn: "z6-32482", lat: 34.7855122, lng: -76.4655264 },
-      { name: "Styron Yard", sn: "z6-32414", lat: 34.789731, lng: -76.4612296 }
+      { name: "Ghost Forest", sn: "z6-33252", lat: 34.7883175, lng: -76.4653989, color: "#10b981" }, // green
+      { name: "Murphy Cemetery", sn: "z6-33251", lat: 34.789873, lng: -76.4655548, color: "#6b7280" }, // grey
+      { name: "Tidal Ditch", sn: "z6-32482", lat: 34.7855122, lng: -76.4655264, color: "#1e3a8a" }, // dark blue
+      { name: "Styron Yard", sn: "z6-32414", lat: 34.789731, lng: -76.4612296, color: "#f59e0b" }  // yellow
     ];
-
-    // Brand colors per site
-    const siteColors = {
-      "Tidal Ditch": { line: "#1e3a8a", fill: "#1e3a8a33", marker: "#1e3a8a" }, // dark blue
-      "Murphy Cemetery": { line: "#6b7280", fill: "#6b728033", marker: "#6b7280" }, // grey
-      "Ghost Forest": { line: "#10b981", fill: "#10b98133", marker: "#10b981" }, // green
-      "Styron Yard": { line: "#f59e0b", fill: "#f59e0b33", marker: "#f59e0b" }  // yellow
-    };
 
     // Helper: Choose proxy URL based on environment
     const baseUrl = (window.location.hostname === 'localhost')
@@ -157,9 +200,9 @@
     const clientCache = new Map();
     const CLIENT_CACHE_TTL_MS = 60 * 1000; // optional: mirror server cache for UX
 
-    let lastSite = null;
     let chartInstances = [];
-    let apiError = false;
+    let allDevices = {}; // { sn: device }
+    let lastSite = null;
 
     // Sensor keys to look for (case-insensitive match)
     const SENSOR_KEYS = [
@@ -195,32 +238,17 @@
       attribution: 'Tiles © Esri'
     }).addTo(map);
 
-    // Simple colored circle marker
-    function coloredCircle(color) {
-      return L.circleMarker([0,0], {
-        radius: 8,
-        color: color,
-        weight: 2,
-        fillColor: color,
-        fillOpacity: 0.8
-      });
-    }
-
-    // Add markers for each site with color
+    // Add original Leaflet markers for each site
     sites.forEach(site => {
-      const color = siteColors[site.name]?.marker || "#3b82f6";
-      const marker = L.circleMarker([site.lat, site.lng], {
-        radius: 8,
-        color: color,
-        weight: 2,
-        fillColor: color,
-        fillOpacity: 0.8
-      }).addTo(map);
-      marker.bindPopup(`<b>${site.name}</b><br>SN: ${site.sn}<br><small>Click to load data</small>`);
-      marker.on('click', () => fetchAndShowSite(site));
+      const marker = L.marker([site.lat, site.lng]).addTo(map);
+      marker.bindPopup(`<b>${site.name}</b><br>SN: ${site.sn}`);
+      marker.on('click', () => {
+        showPerSiteCharts(site.sn);
+        document.getElementById('siteSelect').value = site.sn;
+      });
     });
 
-    // Populate optional dropdown
+    // Populate dropdown
     const siteSelect = document.getElementById('siteSelect');
     sites.forEach(site => {
       const opt = document.createElement('option');
@@ -230,8 +258,7 @@
     });
     document.getElementById('fetchSelected').addEventListener('click', () => {
       const sn = siteSelect.value;
-      const site = sites.find(s => s.sn === sn);
-      if (site) fetchAndShowSite(site);
+      if (sn) showPerSiteCharts(sn);
     });
 
     // Helper to filter readings by date range
@@ -256,24 +283,23 @@
       return null;
     }
 
-    function renderCharts(site, device) {
-      const range = document.getElementById('range').value;
-      const siteColor = siteColors[site.name] || { line: '#3b82f6', fill: '#3b82f633' };
-
-      let chartsHtml = `<div class="site-title">${site.name} (SN: ${site.sn})</div>`;
+    function showPerSiteCharts(sn) {
+      destroyCharts();
+      lastSite = sn;
+      const site = sites.find(s => s.sn === sn);
+      const device = allDevices[sn];
+      let chartsHtml = `<div class="site-title" style="color:${site.color}">${site.name} (SN: ${site.sn})</div>`;
       if (!device || !device.data) {
-        document.getElementById('charts').innerHTML = chartsHtml + '<div>No data available.</div>';
+        document.getElementById('perSiteCharts').innerHTML = chartsHtml + '<div>No data available.</div>';
         return;
       }
-
-      // Prepare per-site mini charts
       chartsHtml += `<div class="site-grid">`;
       SENSOR_KEYS.forEach(sensor => {
         const key = findSensorKey(device.data, sensor.aliases);
         if (key && Array.isArray(device.data[key]) && device.data[key].length > 0) {
           let readings = device.data[key][0].readings || [];
           const units = (device.data[key][0].metadata && device.data[key][0].metadata.units) || '';
-          readings = filterReadings(readings, parseInt(range, 10));
+          readings = filterReadings(readings, parseInt(document.getElementById('range').value, 10));
           if (readings.length > 0) {
             const chartId = `chart-${site.sn}-${sensor.type}`;
             chartsHtml += `
@@ -286,26 +312,16 @@
         }
       });
       chartsHtml += `</div>`;
+      document.getElementById('perSiteCharts').innerHTML = chartsHtml;
 
-      // Combined charts placeholders
-      chartsHtml += `
-        <div class="site-title" style="margin-top:24px;">All Sites - Water Temperature (°F)</div>
-        <canvas id="combined-temp" class="combinedChart"></canvas>
-        <div class="site-title">All Sites - Conductivity (mS/inch)</div>
-        <canvas id="combined-ec" class="combinedChart"></canvas>
-      `;
-
-      document.getElementById('charts').innerHTML = chartsHtml;
-
-      // Render per-site mini charts (use site color)
+      // Render mini charts
       SENSOR_KEYS.forEach(sensor => {
         const key = findSensorKey(device.data, sensor.aliases);
         if (key && Array.isArray(device.data[key]) && device.data[key].length > 0) {
           let readings = device.data[key][0].readings || [];
           const units = (device.data[key][0].metadata && device.data[key][0].metadata.units) || '';
-          readings = filterReadings(readings, parseInt(range, 10));
+          readings = filterReadings(readings, parseInt(document.getElementById('range').value, 10));
           if (readings.length > 0) {
-            // Convert values
             let values, label;
             if (sensor.type === "level") {
               values = readings.map(r => toFeet(r.value, units));
@@ -327,8 +343,9 @@
                   label: label,
                   data: values,
                   fill: false,
-                  borderColor: siteColor.line,
-                  backgroundColor: siteColor.fill,
+                  borderColor: site.color,
+                  backgroundColor: site.color + "33",
+                  borderWidth: 1,
                   tension: 0.1,
                   pointRadius: 0
                 }]
@@ -359,29 +376,26 @@
           }
         }
       });
-
-      // Render combined charts for all sites
-      renderCombinedCharts();
     }
 
-    // Gather and plot combined charts for all sites (use per-site colors)
-    async function renderCombinedCharts() {
+    // Combined charts for all sites
+    function renderCombinedCharts() {
+      destroyCharts();
+      let chartsHtml = `
+        <div class="site-title" style="margin-top:24px;">All Sites - Water Temperature (°F)</div>
+        <canvas id="combined-temp" class="combinedChart"></canvas>
+        <div class="site-title">All Sites - Conductivity (mS/inch)</div>
+        <canvas id="combined-ec" class="combinedChart"></canvas>
+      `;
+      document.getElementById('combinedCharts').innerHTML = chartsHtml;
+
       const range = document.getElementById('range').value;
       const tempDatasets = [];
       const ecDatasets = [];
 
-      for (const site of sites) {
-        const color = siteColors[site.name] || { line: '#3b82f6', fill: '#3b82f633' };
-
-        // Try cache first
-        let device = getFreshFromClientCache(site.sn);
-        if (!device) {
-          try {
-            const { perPage, startDate } = getDateRangeParams();
-            device = await fetchDeviceFromProxy(site.sn, perPage, startDate);
-            clientCache.set(site.sn, { device, fetchedAtMs: Date.now() });
-          } catch (e) { continue; }
-        }
+      sites.forEach(site => {
+        const device = allDevices[site.sn];
+        if (!device || !device.data) return;
         // Water Temp
         const tempKey = findSensorKey(device.data, ["Water Temperature", "Temperature"]);
         if (tempKey && Array.isArray(device.data[tempKey]) && device.data[tempKey].length > 0) {
@@ -392,8 +406,9 @@
             tempDatasets.push({
               label: site.name,
               data: readings.map(r => ({ x: r.datetime, y: toFahrenheit(r.value, units) })),
-              borderColor: color.line,
-              backgroundColor: color.fill,
+              borderColor: site.color,
+              backgroundColor: site.color + "33",
+              borderWidth: 1,
               fill: false,
               tension: 0.1,
               pointRadius: 0
@@ -410,15 +425,16 @@
             ecDatasets.push({
               label: site.name,
               data: readings.map(r => ({ x: r.datetime, y: toMsPerInch(r.value, units) })),
-              borderColor: color.line,
-              backgroundColor: color.fill,
+              borderColor: site.color,
+              backgroundColor: site.color + "33",
+              borderWidth: 1,
               fill: false,
               tension: 0.1,
               pointRadius: 0
             });
           }
         }
-      }
+      });
 
       // Water Temp Combined Chart
       const tempCtx = document.getElementById('combined-temp').getContext('2d');
@@ -485,12 +501,6 @@
         </div>`;
     }
 
-    function showLoading(site) {
-      document.getElementById('charts').innerHTML =
-        `<div class="site-title">${site.name} (SN: ${site.sn})</div>
-         <div class="loading">Loading data...</div>`;
-    }
-
     // Build query and fetch for a single device
     async function fetchDeviceFromProxy(sn, perPage, startDate) {
       const params = new URLSearchParams();
@@ -523,65 +533,34 @@
       return { perPage: MAX_PER_PAGE, startDate };
     }
 
-    function getFreshFromClientCache(sn) {
-      const entry = clientCache.get(sn);
-      if (!entry) return null;
-      if (Date.now() - entry.fetchedAtMs < CLIENT_CACHE_TTL_MS) return entry.device;
-      clientCache.delete(sn);
-      return null;
-    }
-
-    async function fetchAndShowSite(site) {
-      lastSite = site;
-      destroyCharts();
-
-      // Show cached device quickly if fresh (optional UX)
-      const cached = getFreshFromClientCache(site.sn);
-      if (cached) {
-        renderCharts(site, cached);
-        // Also kick a background refresh in case server cache expired
-        backgroundRefresh(site);
-        return;
-      }
-
-      showLoading(site);
-      try {
-        const { perPage, startDate } = getDateRangeParams();
-        const device = await fetchDeviceFromProxy(site.sn, perPage, startDate);
-        clientCache.set(site.sn, { device, fetchedAtMs: Date.now() });
-        renderCharts(site, device);
-      } catch (err) {
-        apiError = true;
-        console.error(err);
-        showApiError(err.message);
-      }
-    }
-
-    // Background refresh: re-fetch silently and update view if still on same site
-    async function backgroundRefresh(site) {
-      try {
-        const { perPage, startDate } = getDateRangeParams();
-        const device = await fetchDeviceFromProxy(site.sn, perPage, startDate);
-        clientCache.set(site.sn, { device, fetchedAtMs: Date.now() });
-        if (lastSite && lastSite.sn === site.sn) {
-          destroyCharts();
-          renderCharts(site, device);
+    // Load all data for all sites on page load
+    async function loadAllSites() {
+      document.getElementById('perSiteCharts').innerHTML = '';
+      document.getElementById('combinedCharts').innerHTML = '';
+      document.getElementById('charts').firstElementChild.innerHTML = 'Loading all sites...';
+      allDevices = {};
+      const { perPage, startDate } = getDateRangeParams();
+      await Promise.all(sites.map(async site => {
+        try {
+          const device = await fetchDeviceFromProxy(site.sn, perPage, startDate);
+          allDevices[site.sn] = device;
+        } catch (e) {
+          allDevices[site.sn] = null;
         }
-      } catch (e) {
-        // Swallow background errors to avoid UX flicker
-        console.warn('Background refresh failed:', e.message);
-      }
+      }));
+      document.getElementById('charts').firstElementChild.innerHTML = '';
+      renderCombinedCharts();
+      if (lastSite) showPerSiteCharts(lastSite);
     }
 
-    // When range changes, if a site is selected, refetch that site (so server-side cache respects new time window)
+    // When range changes, reload all sites
     document.getElementById('range').addEventListener('change', () => {
-      if (!lastSite) return;
-      clientCache.delete(lastSite.sn);
-      fetchAndShowSite(lastSite);
+      loadAllSites();
     });
 
-    // Optionally, choose an initial site to show by default:
-    // fetchAndShowSite(sites[0]);
-  </script>
+    // Initial load
+    loadAllSites();
+    </script>
 </body>
+
 </html>
