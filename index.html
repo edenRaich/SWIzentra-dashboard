@@ -25,6 +25,8 @@
     #charts { margin-top: 24px; }
     #range { margin-bottom: 12px; }
     .error-message { color: red; margin-top: 1em; }
+    .controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .loading { color: #666; margin-top: 8px; }
   </style>
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -36,15 +38,20 @@
 <body>
   <h2>Zentra Sites Map & Sensor Data</h2>
   <div id="map"></div>
-  <div>
+  <div class="controls">
     <label for="range">Show data for: </label>
     <select id="range">
       <option value="1">Past 24 hours</option>
       <option value="3">Past 3 days</option>
       <option value="7" selected>Past week</option>
     </select>
+    <label for="siteSelect">Select site:</label>
+    <select id="siteSelect">
+      <option value="">-- Choose a site or click a marker --</option>
+    </select>
+    <button id="fetchSelected">Fetch selected site</button>
   </div>
-  <div id="charts"><div style="color: #555; margin-top: 1em;">Click a site marker on the map to view its sensor data.</div></div>
+  <div id="charts"><div style="color: #555; margin-top: 1em;">Click a site marker on the map (or choose from the dropdown) to load its sensor data.</div></div>
 
   <script>
     // Site/device info
@@ -61,7 +68,11 @@
       : 'https://zentra-proxy.onrender.com';
 
     const MAX_PER_PAGE = 1000000;
-    let siteDataCache = {}; // { [sn]: deviceData }
+
+    // Client-side cache within the page session: { [sn]: { device, fetchedAtMs } }
+    const clientCache = new Map();
+    const CLIENT_CACHE_TTL_MS = 60 * 1000; // optional: mirror server cache for UX
+
     let lastSite = null;
     let chartInstances = [];
     let apiError = false;
@@ -75,8 +86,22 @@
     // Add markers for each site
     sites.forEach(site => {
       const marker = L.marker([site.lat, site.lng]).addTo(map);
-      marker.bindPopup(`<b>${site.name}</b><br>SN: ${site.sn}`);
-      marker.on('click', () => showSiteData(site));
+      marker.bindPopup(`<b>${site.name}</b><br>SN: ${site.sn}<br><small>Click to load data</small>`);
+      marker.on('click', () => fetchAndShowSite(site));
+    });
+
+    // Populate optional dropdown
+    const siteSelect = document.getElementById('siteSelect');
+    sites.forEach(site => {
+      const opt = document.createElement('option');
+      opt.value = site.sn;
+      opt.textContent = `${site.name} (${site.sn})`;
+      siteSelect.appendChild(opt);
+    });
+    document.getElementById('fetchSelected').addEventListener('click', () => {
+      const sn = siteSelect.value;
+      const site = sites.find(s => s.sn === sn);
+      if (site) fetchAndShowSite(site);
     });
 
     // Helper to filter readings by date range
@@ -86,10 +111,15 @@
       return readings.filter(r => new Date(r.datetime) >= cutoff);
     }
 
+    function destroyCharts() {
+      chartInstances.forEach(chart => chart.destroy());
+      chartInstances = [];
+    }
+
     function renderCharts(site, device) {
       const range = document.getElementById('range').value;
       let chartsHtml = `<div class="site-title">${site.name} (SN: ${site.sn})</div>`;
-      if (!device.data) {
+      if (!device || !device.data) {
         document.getElementById('charts').innerHTML = chartsHtml + '<div>No data available.</div>';
         return;
       }
@@ -130,7 +160,8 @@
                   fill: false,
                   borderColor: 'rgba(75, 192, 192, 1)',
                   backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                  tension: 0.1
+                  tension: 0.1,
+                  pointRadius: 0
                 }]
               },
               options: {
@@ -142,27 +173,20 @@
                       parser: 'yyyy-MM-dd HH:mm:ssXXX',
                       tooltipFormat: 'PP HH:mm',
                       unit: 'hour',
-                      displayFormats: {
-                        hour: 'MMM d, HH:mm'
-                      }
+                      displayFormats: { hour: 'MMM d, HH:mm' }
                     },
-                    title: {
-                      display: true,
-                      text: 'Timestamp'
-                    }
+                    title: { display: true, text: 'Timestamp' }
                   },
                   y: {
                     beginAtZero: false,
-                    title: {
-                      display: true,
-                      text: units || sensorName
-                    }
+                    title: { display: true, text: units || sensorName }
                   }
                 },
                 plugins: {
                   legend: { display: true },
                   tooltip: { mode: 'index', intersect: false }
-                }
+                },
+                animation: false
               }
             });
             chartInstances.push(chart);
@@ -171,75 +195,111 @@
       });
     }
 
-    // Show user-friendly error if API failed
-    function showApiError() {
+    function showApiError(message) {
       document.getElementById('charts').innerHTML =
         `<div class="error-message">
-          Unable to load data from Zentra API (call limit reached or network error).<br>
-          Please try again later.
+          ${message || 'Unable to load data from Zentra API (call limit reached or network error).'}
+          <br>Please try again later.
         </div>`;
     }
 
-    // Show data for a site (from cache)
-    function showSiteData(site) {
-      lastSite = site;
-      chartInstances.forEach(chart => chart.destroy());
-      chartInstances = [];
-      if (apiError) {
-        showApiError();
-        return;
-      }
-      if (siteDataCache[site.sn]) {
-        renderCharts(site, siteDataCache[site.sn]);
-      } else {
-        document.getElementById('charts').innerHTML =
-          `<div class="site-title">${site.name} (SN: ${site.sn})</div><div>No data available.</div>`;
-      }
+    function showLoading(site) {
+      document.getElementById('charts').innerHTML =
+        `<div class="site-title">${site.name} (SN: ${site.sn})</div>
+         <div class="loading">Loading data...</div>`;
     }
 
-    // Listen for range changes
-    document.getElementById('range').addEventListener('change', () => {
-      if (apiError) {
-        showApiError();
-        return;
-      }
-      if (lastSite && siteDataCache[lastSite.sn]) {
-        chartInstances.forEach(chart => chart.destroy());
-        chartInstances = [];
-        renderCharts(lastSite, siteDataCache[lastSite.sn]);
-      }
-    });
+    // Build query and fetch for a single device
+    async function fetchDeviceFromProxy(sn, perPage, startDate) {
+      const params = new URLSearchParams();
+      params.set('device_sn', sn);
+      if (perPage) params.set('per_page', perPage);
+      if (startDate) params.set('start_date', startDate);
 
-    // Fetch all site data on load (default: past week)
-    async function fetchAllSiteDataOnLoad() {
-      const range = document.getElementById('range').value;
-      const days = parseInt(range, 10);
+      const url = `${baseUrl}/zentra?${params.toString()}`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`Proxy error ${res.status}: ${text}`);
+      }
+      const json = await res.json();
+      if (!json || !Array.isArray(json.devices) || json.devices.length === 0) {
+        throw new Error('No device data returned');
+      }
+      const device = json.devices[0];
+      if (device && device.error) {
+        throw new Error(`Zentra error for ${device.device_sn}: ${device.status} - ${device.body}`);
+      }
+      return device;
+    }
+
+    function getDateRangeParams() {
+      const days = parseInt(document.getElementById('range').value, 10);
       const now = new Date();
       const start = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-      const startDate = start.toISOString().slice(0,10);
+      const startDate = start.toISOString().slice(0, 10); // API expects YYYY-MM-DD
+      return { perPage: MAX_PER_PAGE, startDate };
+    }
 
-      // Build a comma-separated list of SNs
-      const sns = sites.map(site => site.sn).join(',');
-      const url = `${baseUrl}/zentra?device_sn=${sns}&per_page=${MAX_PER_PAGE}&start_date=${startDate}`;
+    function getFreshFromClientCache(sn) {
+      const entry = clientCache.get(sn);
+      if (!entry) return null;
+      if (Date.now() - entry.fetchedAtMs < CLIENT_CACHE_TTL_MS) return entry.device;
+      clientCache.delete(sn);
+      return null;
+    }
 
+    async function fetchAndShowSite(site) {
+      lastSite = site;
+      destroyCharts();
+
+      // Show cached device quickly if fresh (optional UX)
+      const cached = getFreshFromClientCache(site.sn);
+      if (cached) {
+        renderCharts(site, cached);
+        // Also kick a background refresh in case server cache expired
+        backgroundRefresh(site);
+        return;
+      }
+
+      showLoading(site);
       try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('API error');
-        const data = await res.json();
-        if (data.devices && Array.isArray(data.devices)) {
-          data.devices.forEach(device => {
-            siteDataCache[device.device_sn] = device;
-          });
-        }
+        const { perPage, startDate } = getDateRangeParams();
+        const device = await fetchDeviceFromProxy(site.sn, perPage, startDate);
+        clientCache.set(site.sn, { device, fetchedAtMs: Date.now() });
+        renderCharts(site, device);
       } catch (err) {
         apiError = true;
-        showApiError();
+        console.error(err);
+        showApiError(err.message);
       }
     }
 
-    // On page load, fetch all data
-    fetchAllSiteDataOnLoad();
+    // Background refresh: re-fetch silently and update view if still on same site
+    async function backgroundRefresh(site) {
+      try {
+        const { perPage, startDate } = getDateRangeParams();
+        const device = await fetchDeviceFromProxy(site.sn, perPage, startDate);
+        clientCache.set(site.sn, { device, fetchedAtMs: Date.now() });
+        if (lastSite && lastSite.sn === site.sn) {
+          destroyCharts();
+          renderCharts(site, device);
+        }
+      } catch (e) {
+        // Swallow background errors to avoid UX flicker
+        console.warn('Background refresh failed:', e.message);
+      }
+    }
 
+    // When range changes, if a site is selected, refetch that site (so server-side cache respects new time window)
+    document.getElementById('range').addEventListener('change', () => {
+      if (!lastSite) return;
+      // Invalidate client cache for that site so we refetch fresh for the new range
+      clientCache.delete(lastSite.sn);
+      fetchAndShowSite(lastSite);
+    });
+
+ 
   </script>
 </body>
 </html>
