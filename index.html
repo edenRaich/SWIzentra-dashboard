@@ -19,7 +19,7 @@
     <style>
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
-            background: #f8fafc;
+            background: #fffbe6;
             margin: 0;
             padding: 0;
         }
@@ -73,6 +73,21 @@
             letter-spacing: 1px;
         }
 
+        .spacer {
+            height: 32px;
+            width: 100%;
+        }
+
+        .dashboard-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 32px;
+            margin-bottom: 18px;
+            min-height: 600px;
+        }
+
         .blurb-photo-col {
             display: flex;
             flex-direction: column;
@@ -105,10 +120,10 @@
         .blurb-long {
             width: 100%;
             flex: 1 1 auto;
-            background: #fff;
+            background: transparent;
             border: 3px solid #14b8a6;
             border-radius: 12px;
-            padding: 22px 18px;
+            padding: 22px 18px 18px 18px;
             font-size: 1.13em;
             color: #134e4a;
             box-shadow: 0 2px 8px #0001;
@@ -117,42 +132,48 @@
             align-items: flex-start;
             justify-content: left;
             margin-bottom: 24px;
+            position: relative;
         }
 
-        .dashboard-row {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            align-items: flex-start;
-            gap: 32px;
-            margin-bottom: 18px;
-            min-height: 600px;
+        .blurb-label {
+            position: absolute;
+            top: 8px;
+            left: 18px;
+            font-size: 1.1em;
+            color: #14b8a6;
+            font-weight: bold;
+            background: #fffbe6;
+            padding: 0 8px;
+            pointer-events: none;
+            z-index: 2;
         }
 
         .map-charts-col {
             display: flex;
-            flex-direction: row;
-            gap: 32px;
-            align-items: flex-start;
-            flex-wrap: wrap;
+            flex-direction: column;
+            align-items: center;
+            flex: 1 1 600px;
+            min-width: 340px;
+            max-width: 900px;
         }
 
         #map {
-            width: 420px;
-            height: 400px;
+            width: 600px;
+            height: 480px;
             border-radius: 10px;
             border: 3px solid #14b8a6;
             box-shadow: 0 2px 8px #0001;
             background: #fff;
+            margin-bottom: 32px;
         }
 
         .combined-charts {
             display: flex;
             flex-direction: column;
             gap: 24px;
-            min-width: 340px;
-            max-width: 480px;
-            flex: 1 1 340px;
+            width: 100%;
+            max-width: 900px;
+            margin-bottom: 32px;
         }
 
         .combinedChart {
@@ -224,12 +245,16 @@
             }
 
             .map-charts-col {
-                flex-direction: column;
-                align-items: center;
+                width: 95vw;
+                max-width: 98vw;
             }
 
             #map,
-            .combined-charts,
+            .combined-charts {
+                width: 95vw;
+                max-width: 98vw;
+            }
+
             .blurb-photo-col {
                 width: 95vw;
                 max-width: 98vw;
@@ -259,7 +284,7 @@
             <div class="logo-placeholder">Logo</div>
         </div>
     </div>
-
+    <div class="spacer"></div>
     <div class="dashboard-row">
         <div class="map-charts-col">
             <div id="map"></div>
@@ -273,6 +298,7 @@
         <div class="blurb-photo-col">
             <div class="photo-space">Photo</div>
             <div class="blurb-long">
+                <span class="blurb-label">Blurb</span>
                 <!-- Place for text -->
             </div>
         </div>
