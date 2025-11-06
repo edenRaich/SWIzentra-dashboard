@@ -309,8 +309,8 @@
             <div id="map"></div>
             <div class="combined-charts-row">
                 <div style="flex:1;display:flex;flex-direction:column;">
-                    <div class="site-title">All Sites - Water Temperature (°F)</div>
-                    <canvas id="combined-temp" class="combinedChart"></canvas>
+                    <div class="site-title">All Sites - Water Level (ft)</div>
+                    <canvas id="combined-level" class="combinedChart"></canvas>
                 </div>
                 <div style="flex:1;display:flex;flex-direction:column;">
                     <div class="site-title">All Sites - Conductivity (mS/inch)</div>
@@ -320,7 +320,8 @@
         </div>
         <div class="blurb-box">
             <span class="blurb-label">Blurb</span>
-            
+            Welcome to the Down East Salt Water Intrusion Monitoring System dashboard. Here you can view real-time and
+            historical data from multiple monitoring sites.
         </div>
     </div>
 
@@ -564,26 +565,27 @@
     // Combined charts for all sites
     function renderCombinedCharts() {
       destroyCharts(combinedChartInstances);
-      const tempCtx = document.getElementById('combined-temp').getContext('2d');
+      const levelCtx = document.getElementById('combined-level').getContext('2d');
       const ecCtx = document.getElementById('combined-ec').getContext('2d');
 
       const range = parseInt(document.getElementById('range').value, 10);
-      const tempDatasets = [];
+      const levelDatasets = [];
       const ecDatasets = [];
 
       sites.forEach(site => {
         const device = allDevices[site.sn];
         if (!device || !device.data) return;
 
-        const tKey = findSensorKey(device.data, ["Water Temperature", "Temperature"]);
-        if (tKey && Array.isArray(device.data[tKey]) && device.data[tKey].length > 0) {
-          let readings = device.data[tKey][0].readings || [];
-          const units = (device.data[tKey][0].metadata && device.data[tKey][0].metadata.units) || '';
+        // Water Level (ft)
+        const lKey = findSensorKey(device.data, ["Water Level", "Level"]);
+        if (lKey && Array.isArray(device.data[lKey]) && device.data[lKey].length > 0) {
+          let readings = device.data[lKey][0].readings || [];
+          const units = (device.data[lKey][0].metadata && device.data[lKey][0].metadata.units) || '';
           readings = filterReadings(readings, range);
           if (readings.length > 0) {
-            tempDatasets.push({
+            levelDatasets.push({
               label: site.name,
-              data: readings.map(r => ({ x: r.datetime, y: toFahrenheit(r.value, units) })),
+              data: readings.map(r => ({ x: r.datetime, y: toFeet(r.value, units) })),
               borderColor: site.color,
               backgroundColor: site.color + "33",
               borderWidth: 1,
@@ -594,6 +596,7 @@
           }
         }
 
+        // Conductivity (mS/inch)
         const eKey = findSensorKey(device.data, ["Conductivity", "EC"]);
         if (eKey && Array.isArray(device.data[eKey]) && device.data[eKey].length > 0) {
           let readings = device.data[eKey][0].readings || [];
@@ -614,9 +617,9 @@
         }
       });
 
-      const tempChart = new Chart(tempCtx, {
+      const levelChart = new Chart(levelCtx, {
         type: 'line',
-        data: { datasets: tempDatasets },
+        data: { datasets: levelDatasets },
         options: {
           responsive: true,
           plugins: { legend: { display: true } },
@@ -631,7 +634,7 @@
               },
               title: { display: true, text: 'Timestamp' }
             },
-            y: { beginAtZero: false, title: { display: true, text: 'Water Temperature (°F)' } }
+            y: { beginAtZero: false, title: { display: true, text: 'Water Level (ft)' } }
           },
           animation: false
         }
@@ -660,7 +663,7 @@
         }
       });
 
-      combinedChartInstances.push(tempChart, ecChart);
+      combinedChartInstances.push(levelChart, ecChart);
     }
 
     function showApiError(message) {
