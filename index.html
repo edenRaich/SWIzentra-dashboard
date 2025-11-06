@@ -84,72 +84,8 @@
             justify-content: center;
             align-items: flex-start;
             gap: 32px;
-            /* keep your preferred gap */
             margin-bottom: 18px;
             min-height: 600px;
-        }
-
-        .blurb-photo-col {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            flex: 1 1 220px;
-            min-width: 220px;
-            max-width: 340px;
-            height: 100%;
-            margin-left: 0;
-            /* moved closer to map */
-            transition: margin-left 0.2s;
-        }
-
-        .photo-space {
-            width: 100%;
-            min-height: 120px;
-            max-height: 180px;
-            background: transparent;
-            border: 3px solid #14b8a6;
-            border-radius: 12px;
-            margin-bottom: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-sizing: border-box;
-            box-shadow: 0 2px 8px #0001;
-            color: #14b8a6;
-            font-size: 1.1em;
-            font-weight: bold;
-            letter-spacing: 1px;
-        }
-
-        .blurb-long {
-            width: 100%;
-            flex: 1 1 auto;
-            background: transparent;
-            border: 3px solid #14b8a6;
-            border-radius: 12px;
-            padding: 18px 12px 12px 12px;
-            font-size: 1.05em;
-            color: #134e4a;
-            box-shadow: 0 2px 8px #0001;
-            min-height: 120px;
-            display: flex;
-            align-items: flex-start;
-            justify-content: left;
-            margin-bottom: 18px;
-            position: relative;
-        }
-
-        .blurb-label {
-            position: absolute;
-            top: 6px;
-            left: 12px;
-            font-size: 1em;
-            color: #14b8a6;
-            font-weight: bold;
-            background: #fffbe6;
-            padding: 0 8px;
-            pointer-events: none;
-            z-index: 2;
         }
 
         .map-charts-col {
@@ -266,12 +202,6 @@
                 max-width: 98vw;
             }
 
-            .blurb-photo-col {
-                width: 95vw;
-                max-width: 98vw;
-                margin-left: 0;
-            }
-
             .header-row {
                 flex-direction: column;
                 gap: 12px;
@@ -299,11 +229,6 @@
 
             .combinedChart {
                 width: 100%;
-            }
-
-            .blurb-photo-col {
-                min-width: 0;
-                max-width: 100vw;
             }
         }
     </style>
@@ -334,13 +259,6 @@
                     <div class="site-title">All Sites - Conductivity (mS/inch)</div>
                     <canvas id="combined-ec" class="combinedChart"></canvas>
                 </div>
-            </div>
-        </div>
-        <div class="blurb-photo-col">
-            <div class="photo-space">Photo</div>
-            <div class="blurb-long">
-                <span class="blurb-label">Blurb</span>
-                <!-- Place for text -->
             </div>
         </div>
     </div>
@@ -383,7 +301,8 @@
     // In-memory cache: populated once on load, reused for clicks
     let allDevices = {}; // { sn: device }
     let lastSite = null;
-    let chartInstances = [];
+    let perSiteChartInstances = [];
+    let combinedChartInstances = [];
 
     // Sensors to display
     const SENSOR_KEYS = [
@@ -414,6 +333,12 @@
       if (u.includes("µs/cm") || u.includes("us/cm")) return (value / 1000) * 2.54;
       if (u.includes("ms/inch")) return value;
       return value;
+    }
+
+    // Chart destroy helper
+    function destroyCharts(chartArray) {
+      chartArray.forEach(c => { try { c.destroy(); } catch(e) {} });
+      chartArray.length = 0;
     }
 
     // Map with ArcGIS imagery and original markers
@@ -464,10 +389,6 @@
       const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
       return readings.filter(r => new Date(r.datetime) >= cutoff);
     }
-    function destroyCharts() {
-      chartInstances.forEach(c => { try { c.destroy(); } catch(e) {} });
-      chartInstances = [];
-    }
     function findSensorKey(data, aliases) {
       for (const key of Object.keys(data)) {
         for (const a of aliases) {
@@ -483,7 +404,7 @@
       lastSite = sn;
       const device = allDevices[sn];
 
-      destroyCharts();
+      destroyCharts(perSiteChartInstances);
       let html = `<div class="site-title" style="color:${site.color}">${site.name} (SN: ${site.sn})</div>`;
 
       if (!device || !device.data) {
@@ -575,16 +496,15 @@
             animation: false
           }
         });
-        chartInstances.push(chart);
+        perSiteChartInstances.push(chart);
       });
     }
 
     // Combined charts for all sites
     function renderCombinedCharts() {
+      destroyCharts(combinedChartInstances);
       const tempCtx = document.getElementById('combined-temp').getContext('2d');
       const ecCtx = document.getElementById('combined-ec').getContext('2d');
-      chartInstances.forEach(c => { try { c.destroy(); } catch(e) {} });
-      chartInstances = [];
 
       const range = parseInt(document.getElementById('range').value, 10);
       const tempDatasets = [];
@@ -679,7 +599,7 @@
         }
       });
 
-      chartInstances.push(tempChart, ecChart);
+      combinedChartInstances.push(tempChart, ecChart);
     }
 
     function showApiError(message) {
@@ -717,7 +637,7 @@
     async function loadAllSites() {
       document.getElementById('loadingMessage').textContent = 'Loading all sites...';
       document.getElementById('perSiteCharts').innerHTML = '';
-      destroyCharts();
+      destroyCharts(perSiteChartInstances);
 
       allDevices = {};
       const { perPage, startDate } = getDateRangeParams();
