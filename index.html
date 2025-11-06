@@ -152,19 +152,20 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            flex: 1 1 600px;
+            flex: 1 1 900px;
             min-width: 340px;
-            max-width: 900px;
+            max-width: 1200px;
         }
 
         #map {
-            width: 600px;
-            height: 480px;
+            width: 900px;
+            height: 500px;
             border-radius: 10px;
             border: 3px solid #14b8a6;
             box-shadow: 0 2px 8px #0001;
             background: #fff;
             margin-bottom: 32px;
+            max-width: 98vw;
         }
 
         .combined-charts {
@@ -267,6 +268,16 @@
 
             .logo-container {
                 margin-top: 12px;
+            }
+        }
+
+        @media (max-width: 950px) {
+            #map {
+                width: 98vw;
+            }
+
+            .combined-charts {
+                max-width: 98vw;
             }
         }
     </style>
