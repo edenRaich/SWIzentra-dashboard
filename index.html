@@ -28,50 +28,44 @@
             background: url('Title_Image.png') center center/cover no-repeat;
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: space-between;
             position: relative;
             margin-bottom: 30px;
-        }
-
-        .banner-content {
-            display: flex;
-            align-items: center;
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(255, 255, 255, 0.0);
-            padding: 0;
-            border: none;
-        }
-
-        .banner-logo {
-            height: 100px;
-            margin-right: 24px;
-            background: none;
-            box-shadow: none;
-            border: none;
+            padding: 0 40px;
+            box-sizing: border-box;
         }
 
         .banner-title {
             font-size: 2.5rem;
-            color: #fff;
+            color: #082567;
             font-weight: bold;
-            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
             margin: 0;
             padding: 0;
             border: none;
             background: none;
+            text-shadow: 2px 2px 8px rgba(255, 255, 255, 0.2);
+            letter-spacing: 1px;
+            flex: 1;
+            text-align: left;
+            align-self: center;
+        }
+
+        .banner-logo {
+            height: 100px;
+            background: none;
+            box-shadow: none;
+            border: none;
+            align-self: center;
         }
 
         @media (max-width: 600px) {
             .banner-header {
                 height: 120px;
+                padding: 0 10px;
             }
 
             .banner-logo {
                 height: 60px;
-                margin-right: 12px;
             }
 
             .banner-title {
@@ -286,10 +280,8 @@
 <body>
     <!-- Banner Header -->
     <div class="banner-header">
-        <div class="banner-content">
-            <img src="Logo.png" alt="Logo" class="banner-logo">
-            <h1 class="banner-title">Down East Salt Water Intrusion Monitoring System</h1>
-        </div>
+        <h1 class="banner-title">Down East Salt Water Intrusion Monitoring System</h1>
+        <img src="Logo.png" alt="Logo" class="banner-logo">
     </div>
 
     <div class="dashboard-row">
