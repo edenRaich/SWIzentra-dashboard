@@ -24,11 +24,11 @@
         /* --- Banner Header Styles --- */
         .banner-header {
             width: 100%;
-            height: 180px;
-            background: url('TitleImage.png') center center/cover no-repeat;
+            height: 200px;
+            background: #082567;
             display: flex;
-            align-items: center;
-            justify-content: space-between;
+            align-items: flex-start;
+            justify-content: flex-start;
             position: relative;
             margin-bottom: 30px;
             padding: 0 40px;
@@ -36,8 +36,8 @@
         }
 
         .banner-title {
-            font-size: 2.5rem;
-            color: #082567;
+            font-size: 3.2rem;
+            color: #02590f;
             font-weight: bold;
             margin: 0;
             padding: 0;
@@ -45,17 +45,21 @@
             background: none;
             text-shadow: 2px 2px 8px rgba(255, 255, 255, 0.2);
             letter-spacing: 1px;
-            flex: 1;
+            flex: 0 1 auto;
             text-align: left;
-            align-self: center;
+            align-self: flex-start;
+            margin-top: 28px;
+            margin-right: 18px;
         }
 
         .banner-logo {
-            height: 100px;
+            height: 110px;
             background: none;
             box-shadow: none;
             border: none;
-            align-self: center;
+            align-self: flex-start;
+            margin-top: 32px;
+            margin-left: 0px;
         }
 
         @media (max-width: 600px) {
@@ -66,14 +70,15 @@
 
             .banner-logo {
                 height: 60px;
+                margin-top: 20px;
             }
 
             .banner-title {
-                font-size: 1.2rem;
+                font-size: 1.5rem;
+                margin-top: 12px;
             }
         }
 
-        /* --- Your existing styles below --- */
         .dashboard-row {
             display: flex;
             flex-wrap: wrap;
@@ -92,7 +97,8 @@
             align-items: center;
             flex: 1 1 600px;
             min-width: 320px;
-            max-width: 900px;
+            max-width: 1100px;
+            /* increased for bigger charts */
             box-sizing: border-box;
         }
 
@@ -109,22 +115,29 @@
             box-sizing: border-box;
         }
 
+        /* Make all sites charts bigger and prevent label wrapping */
         .combined-charts-row {
             display: flex;
             flex-direction: row;
             gap: 32px;
-            width: 100%;
-            max-width: 900px;
+            width: 1100px;
+            /* increased width */
+            max-width: 98vw;
             margin-bottom: 32px;
             justify-content: center;
             box-sizing: border-box;
+            overflow-x: auto;
+            /* allow horizontal scroll if needed */
         }
 
         .combinedChart {
-            width: 100%;
-            min-width: 180px;
-            height: 220px !important;
-            max-height: 220px;
+            width: 520px;
+            /* increased width */
+            min-width: 320px;
+            max-width: 520px;
+            height: 260px !important;
+            /* increased height */
+            max-height: 260px;
             background: #fff;
             border-radius: 12px;
             border: none;
@@ -133,12 +146,18 @@
         }
 
         .site-title {
-            font-size: 1.2em;
+            font-size: 1.4em;
             font-weight: bold;
             margin-top: 16px;
             margin-bottom: 8px;
             text-align: center;
             background: transparent;
+            color: #c9dc87 !important;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            /* prevent label wrapping */
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .sensor-chart-block {
@@ -151,8 +170,13 @@
             margin-top: 8px;
         }
 
+        /* Controls and site-specific charts section */
+        .controls,
         #charts {
-            margin-top: 24px;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+            box-sizing: border-box;
         }
 
         .controls {
@@ -160,6 +184,15 @@
             gap: 12px;
             align-items: center;
             flex-wrap: wrap;
+            margin-bottom: 12px;
+            padding-left: 8px;
+            padding-right: 8px;
+        }
+
+        #charts {
+            margin-top: 24px;
+            padding-left: 8px;
+            padding-right: 8px;
         }
 
         .loading {
@@ -169,15 +202,20 @@
 
         .site-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            /* smaller for better fit */
             gap: 12px;
             margin-bottom: 24px;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .miniChart {
             width: 100%;
-            height: 140px !important;
-            max-height: 140px;
+            height: 110px !important;
+            /* slightly smaller */
+            max-height: 110px;
             background: #fff;
             border-radius: 12px;
             border: none;
@@ -193,7 +231,7 @@
             min-width: 220px;
             max-width: 340px;
             background: transparent;
-            border: 3px solid #14b8a6;
+            border: 3px solid #c9dc87;
             border-radius: 12px;
             padding: 18px 14px 14px 14px;
             font-size: 1.08em;
@@ -249,6 +287,18 @@
             }
         }
 
+        @media (max-width: 1100px) {
+            .combined-charts-row {
+                width: 98vw;
+                max-width: 98vw;
+            }
+
+            .combinedChart {
+                max-width: 98vw;
+                width: 98vw;
+            }
+        }
+
         @media (max-width: 950px) {
             #map {
                 width: 98vw;
@@ -262,11 +312,21 @@
 
             .combinedChart {
                 width: 100%;
+                max-width: 100vw;
             }
 
             .blurb-box {
                 min-width: 0;
                 max-width: 100vw;
+            }
+
+            .controls,
+            #charts {
+                max-width: 98vw;
+            }
+
+            .site-grid {
+                max-width: 98vw;
             }
         }
     </style>
@@ -323,7 +383,10 @@
         <div id="perSiteCharts"></div>
     </div>
 
+    <!-- JavaScript remains unchanged -->
     <script>
+        // ... your JavaScript code from before ...
+        // (No changes needed for layout/fit, as CSS handles the new sizes and centering)
         // Sites list with your colors
     const sites = [
       { name: "Tidal Ditch", sn: "z6-32482", lat: 34.7855122, lng: -76.4655264, color: "#1e3a8a" }, // dark blue
