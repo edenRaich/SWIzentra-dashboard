@@ -36,8 +36,8 @@
         }
 
         .banner-title {
-            font-size: 2.2rem;
-            /* slightly smaller */
+            font-size: 2.8rem;
+            /* bigger */
             color: #02590f;
             font-weight: bold;
             margin: 0;
@@ -52,10 +52,10 @@
             margin-top: 28px;
             margin-right: 18px;
             white-space: nowrap;
-            /* force one line */
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 65vw;
+            max-width: 80vw;
+            /* allow more width */
         }
 
         .banner-logo {
@@ -65,12 +65,13 @@
             border: none;
             align-self: flex-start;
             margin-top: 32px;
-            margin-left: 0px;
+            margin-left: 60px;
+            /* move logo further right */
         }
 
         @media (max-width: 900px) {
             .banner-title {
-                font-size: 1.2rem;
+                font-size: 1.5rem;
                 max-width: 60vw;
             }
 
@@ -82,6 +83,7 @@
             .banner-logo {
                 height: 60px;
                 margin-top: 20px;
+                margin-left: 20px;
             }
         }
 
@@ -136,7 +138,6 @@
             box-sizing: border-box;
             overflow-x: auto;
             margin-left: 32px;
-            /* Move charts over a little */
         }
 
         .combinedChart {
@@ -152,8 +153,9 @@
             box-sizing: border-box;
         }
 
+        .chart-label,
         .site-title {
-            font-size: 1.4em;
+            font-size: 1.5em;
             font-weight: bold;
             margin-top: 16px;
             margin-bottom: 8px;
@@ -171,14 +173,17 @@
             flex: 0 1 320px;
             min-width: 220px;
             max-width: 340px;
-            background: transparent;
+            background: #fff;
+            /* solid background */
             border: 3px solid #c9dc87;
             border-radius: 12px;
             padding: 18px 14px 14px 14px;
             font-size: 1.08em;
             color: #134e4a;
             box-shadow: 0 2px 8px #0001;
-            min-height: 120px;
+            min-height: 320px;
+            /* taller */
+            height: 100%;
             margin-top: 0;
             margin-bottom: 18px;
             position: relative;
@@ -186,6 +191,9 @@
             word-break: break-word;
             overflow-wrap: break-word;
             align-self: flex-start;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
         }
 
         .blurb-label {
@@ -275,6 +283,12 @@
             padding-right: 8px;
         }
 
+        .controls label {
+            color: #c9dc87;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
         #charts {
             margin-top: 24px;
             padding-left: 8px;
@@ -311,9 +325,13 @@
         }
 
         .sensor-title {
+            font-size: 1.5em;
             font-weight: bold;
+            color: #c9dc87;
             margin-bottom: 4px;
             margin-top: 8px;
+            text-align: center;
+            letter-spacing: 0.5px;
         }
 
         .error-message {
@@ -340,11 +358,11 @@
             <div id="map"></div>
             <div class="combined-charts-row">
                 <div style="flex:1;display:flex;flex-direction:column;">
-                    <div class="site-title">All Sites - Water Level (ft)</div>
+                    <div class="chart-label">All Sites - Water Level (ft)</div>
                     <canvas id="combined-level" class="combinedChart"></canvas>
                 </div>
                 <div style="flex:1;display:flex;flex-direction:column;">
-                    <div class="site-title">All Sites - Conductivity (mS/inch)</div>
+                    <div class="chart-label">All Sites - Conductivity (mS/inch)</div>
                     <canvas id="combined-ec" class="combinedChart"></canvas>
                 </div>
             </div>
@@ -474,7 +492,7 @@
             lastSite = sn;
             const device = allDevices[sn];
             destroyCharts(perSiteChartInstances);
-            let html = `<div class="site-title" style="color:${site.color}">${site.name} (SN: ${site.sn})</div>`;
+            let html = `<div class="chart-label" style="color:${site.color}">${site.name} (SN: ${site.sn})</div>`;
             if (!device || !device.data) {
                 document.getElementById('perSiteCharts').innerHTML = html + '<div>No data available.</div>';
                 return;
