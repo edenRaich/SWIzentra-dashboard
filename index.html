@@ -85,40 +85,30 @@
             display: flex;
             flex-direction: row;
             align-items: flex-start;
-            gap: 32px;
+            gap: 0;
             margin-bottom: 18px;
             width: 100%;
             box-sizing: border-box;
+            padding-left: 24px;
+            padding-right: 24px;
+        }
+
+        .map-blurb-row {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            width: 100%;
         }
 
         .main-content {
             display: flex;
             flex-direction: column;
             align-items: flex-start;
-            margin-left: 48px;
             flex: 1 1 auto;
         }
 
-        @media (max-width: 1200px) {
-            .main-content {
-                margin-left: 16px;
-            }
-        }
-
-        @media (max-width: 900px) {
-            .dashboard-row {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .main-content {
-                margin-left: 0;
-                align-items: center;
-            }
-        }
-
         #map {
-            width: 700px;
+            width: 800px;
             height: 500px;
             border-radius: 10px;
             box-shadow: 0 2px 8px #0001;
@@ -126,13 +116,81 @@
             margin-bottom: 24px;
             border: none;
             box-sizing: border-box;
+            min-width: 320px;
+            max-width: 100%;
         }
 
-        @media (max-width: 800px) {
+        .blurb-box {
+            min-width: 220px;
+            max-width: 340px;
+            background: #c9dc87;
+            border: 3px solid #c9dc87;
+            border-radius: 12px;
+            padding: 18px 14px 14px 14px;
+            font-size: 1.08em;
+            color: #134e4a;
+            box-shadow: 0 2px 8px #0001;
+            min-height: 320px;
+            height: 100%;
+            margin-left: 24px;
+            margin-top: 0;
+            margin-bottom: 18px;
+            position: relative;
+            box-sizing: border-box;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            align-self: flex-start;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        .blurb-label {
+            font-size: 2.8rem;
+            color: #02590f;
+            font-weight: bold;
+            margin: 0;
+            padding: 0;
+            background: none;
+            border: none;
+            letter-spacing: 1px;
+            align-self: flex-start;
+        }
+
+        @media (max-width: 1200px) {
             #map {
                 width: 98vw;
-                min-width: 320px;
             }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .blurb-box {
+                margin-left: 0;
+                margin-top: 24px;
+            }
+
+            .map-blurb-row {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+            padding-left: 8px;
+            padding-right: 8px;
+        }
+
+        .controls label {
+            color: #c9dc87;
+            font-weight: bold;
+            font-size: 1.1em;
         }
 
         .combined-charts-row {
@@ -170,97 +228,6 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-        }
-
-        .blurb-box {
-            min-width: 220px;
-            max-width: 340px;
-            background: #c9dc87;
-            border: 3px solid #c9dc87;
-            border-radius: 12px;
-            padding: 18px 14px 14px 14px;
-            font-size: 1.08em;
-            color: #134e4a;
-            box-shadow: 0 2px 8px #0001;
-            min-height: 320px;
-            height: 100%;
-            margin-top: 0;
-            margin-bottom: 18px;
-            position: relative;
-            box-sizing: border-box;
-            word-break: break-word;
-            overflow-wrap: break-word;
-            align-self: flex-start;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-        }
-
-        .blurb-label {
-            font-size: 2.8rem;
-            color: #02590f;
-            font-weight: bold;
-            margin: 0;
-            padding: 0;
-            background: none;
-            border: none;
-            letter-spacing: 1px;
-            align-self: flex-start;
-        }
-
-        @media (max-width: 1100px) {
-            .blurb-box {
-                max-width: 98vw;
-            }
-
-            .combinedChart {
-                width: 98vw;
-                min-width: 320px;
-            }
-
-            .combined-charts-row {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            #map {
-                width: 98vw;
-            }
-        }
-
-        .controls,
-        #charts {
-            max-width: 1100px;
-            margin-left: auto;
-            margin-right: auto;
-            box-sizing: border-box;
-        }
-
-        .controls {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            flex-wrap: wrap;
-            margin-bottom: 12px;
-            padding-left: 8px;
-            padding-right: 8px;
-        }
-
-        .controls label {
-            color: #c9dc87;
-            font-weight: bold;
-            font-size: 1.1em;
-        }
-
-        #charts {
-            margin-top: 24px;
-            padding-left: 8px;
-            padding-right: 8px;
-        }
-
-        .loading {
-            color: #555;
-            margin-top: 8px;
         }
 
         #perSiteCharts {
@@ -309,6 +276,17 @@
             color: red;
             margin-top: 1em;
         }
+
+        .loading {
+            color: #555;
+            margin-top: 8px;
+        }
+
+        #charts {
+            margin-top: 24px;
+            padding-left: 8px;
+            padding-right: 8px;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script
@@ -325,7 +303,26 @@
     </div>
     <div class="dashboard-row">
         <div class="main-content">
-            <div id="map"></div>
+            <div class="map-blurb-row">
+                <div id="map"></div>
+                <div class="blurb-box">
+                    <span class="blurb-label">Blurb</span>
+                </div>
+            </div>
+            <div class="controls">
+                <label for="range">Show data for: </label>
+                <select id="range">
+                    <option value="1">Past 24 hours</option>
+                    <option value="3">Past 3 days</option>
+                    <option value="7" selected>Past week</option>
+                </select>
+                <label for="siteSelect">Select site:</label>
+                <select id="siteSelect">
+                    <option value="">-- Choose a site or click a marker --</option>
+                </select>
+                <button id="fetchSelected">Show selected site</button>
+                <span id="lastUpdated" style="color:#64748b;"></span>
+            </div>
             <div class="combined-charts-row">
                 <div style="display:flex;flex-direction:column;">
                     <div class="chart-label">All Sites - Water Level (ft)</div>
@@ -338,23 +335,6 @@
             </div>
             <div id="perSiteCharts"></div>
         </div>
-        <div class="blurb-box">
-            <span class="blurb-label">Blurb</span>
-        </div>
-    </div>
-    <div class="controls">
-        <label for="range">Show data for: </label>
-        <select id="range">
-            <option value="1">Past 24 hours</option>
-            <option value="3">Past 3 days</option>
-            <option value="7" selected>Past week</option>
-        </select>
-        <label for="siteSelect">Select site:</label>
-        <select id="siteSelect">
-            <option value="">-- Choose a site or click a marker --</option>
-        </select>
-        <button id="fetchSelected">Show selected site</button>
-        <span id="lastUpdated" style="color:#64748b;"></span>
     </div>
     <div id="charts">
         <div class="loading" id="loadingMessage">Loading all sites...</div>
