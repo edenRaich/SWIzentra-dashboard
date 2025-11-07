@@ -16,7 +16,7 @@
 
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
-            background: #fffbe6;
+            background: #082567;
             margin: 0;
             padding: 0;
         }
@@ -25,7 +25,7 @@
         .banner-header {
             width: 100%;
             height: 200px;
-            background: #082567;
+            background: url('TitleImage.png') center center/cover no-repeat;
             display: flex;
             align-items: flex-start;
             justify-content: flex-start;
@@ -36,7 +36,8 @@
         }
 
         .banner-title {
-            font-size: 3.2rem;
+            font-size: 2.2rem;
+            /* slightly smaller */
             color: #02590f;
             font-weight: bold;
             margin: 0;
@@ -50,6 +51,11 @@
             align-self: flex-start;
             margin-top: 28px;
             margin-right: 18px;
+            white-space: nowrap;
+            /* force one line */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 65vw;
         }
 
         .banner-logo {
@@ -62,7 +68,12 @@
             margin-left: 0px;
         }
 
-        @media (max-width: 600px) {
+        @media (max-width: 900px) {
+            .banner-title {
+                font-size: 1.2rem;
+                max-width: 60vw;
+            }
+
             .banner-header {
                 height: 120px;
                 padding: 0 10px;
@@ -72,33 +83,31 @@
                 height: 60px;
                 margin-top: 20px;
             }
-
-            .banner-title {
-                font-size: 1.5rem;
-                margin-top: 12px;
-            }
         }
 
+        /* --- Dashboard Layout --- */
         .dashboard-row {
             display: flex;
-            flex-wrap: wrap;
+            flex-direction: row;
             justify-content: center;
             align-items: flex-start;
             gap: 32px;
             margin-bottom: 18px;
             min-height: 600px;
-            max-width: 100vw;
+            max-width: 1400px;
+            margin-left: auto;
+            margin-right: auto;
             box-sizing: border-box;
+            width: 100%;
         }
 
         .map-charts-col {
             display: flex;
             flex-direction: column;
             align-items: center;
-            flex: 1 1 600px;
+            flex: 1 1 700px;
             min-width: 320px;
             max-width: 1100px;
-            /* increased for bigger charts */
             box-sizing: border-box;
         }
 
@@ -115,28 +124,26 @@
             box-sizing: border-box;
         }
 
-        /* Make all sites charts bigger and prevent label wrapping */
+        /* --- All Sites Charts --- */
         .combined-charts-row {
             display: flex;
             flex-direction: row;
             gap: 32px;
             width: 1100px;
-            /* increased width */
-            max-width: 98vw;
+            max-width: 100%;
             margin-bottom: 32px;
-            justify-content: center;
+            justify-content: flex-start;
             box-sizing: border-box;
             overflow-x: auto;
-            /* allow horizontal scroll if needed */
+            margin-left: 32px;
+            /* Move charts over a little */
         }
 
         .combinedChart {
             width: 520px;
-            /* increased width */
             min-width: 320px;
             max-width: 520px;
             height: 260px !important;
-            /* increased height */
             max-height: 260px;
             background: #fff;
             border-radius: 12px;
@@ -155,25 +162,104 @@
             color: #c9dc87 !important;
             letter-spacing: 0.5px;
             white-space: nowrap;
-            /* prevent label wrapping */
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
-        .sensor-chart-block {
-            margin-bottom: 12px;
+        /* --- Blurb Box --- */
+        .blurb-box {
+            flex: 0 1 320px;
+            min-width: 220px;
+            max-width: 340px;
+            background: transparent;
+            border: 3px solid #c9dc87;
+            border-radius: 12px;
+            padding: 18px 14px 14px 14px;
+            font-size: 1.08em;
+            color: #134e4a;
+            box-shadow: 0 2px 8px #0001;
+            min-height: 120px;
+            margin-top: 0;
+            margin-bottom: 18px;
+            position: relative;
+            box-sizing: border-box;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            align-self: flex-start;
         }
 
-        .sensor-title {
+        .blurb-label {
+            position: absolute;
+            top: 6px;
+            left: 14px;
+            font-size: 1em;
+            color: #14b8a6;
             font-weight: bold;
-            margin-bottom: 4px;
-            margin-top: 8px;
+            background: #fffbe6;
+            padding: 0 8px;
+            pointer-events: none;
+            z-index: 2;
         }
 
-        /* Controls and site-specific charts section */
+        /* --- Responsive: Stack blurb below map on small screens --- */
+        @media (max-width: 1100px) {
+            .dashboard-row {
+                flex-direction: column;
+                align-items: center;
+                gap: 16px;
+            }
+
+            .map-charts-col,
+            .blurb-box {
+                max-width: 98vw;
+                width: 98vw;
+            }
+
+            .blurb-box {
+                align-self: stretch;
+                margin-left: auto;
+                margin-right: auto;
+            }
+
+            .combined-charts-row {
+                width: 98vw;
+                max-width: 98vw;
+                margin-left: 0;
+            }
+
+            .combinedChart {
+                max-width: 98vw;
+                width: 98vw;
+            }
+        }
+
+        @media (max-width: 950px) {
+            #map {
+                width: 98vw;
+            }
+
+            .combined-charts-row {
+                max-width: 98vw;
+                flex-direction: column;
+                gap: 24px;
+                margin-left: 0;
+            }
+
+            .combinedChart {
+                width: 100%;
+                max-width: 100vw;
+            }
+
+            .blurb-box {
+                min-width: 0;
+                max-width: 100vw;
+            }
+        }
+
+        /* --- Controls and Site-Specific Charts --- */
         .controls,
         #charts {
-            max-width: 900px;
+            max-width: 1100px;
             margin-left: auto;
             margin-right: auto;
             box-sizing: border-box;
@@ -202,132 +288,37 @@
 
         .site-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            /* smaller for better fit */
-            gap: 12px;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 18px;
             margin-bottom: 24px;
-            max-width: 900px;
+            max-width: 1100px;
             margin-left: auto;
             margin-right: auto;
+            overflow-x: auto;
         }
 
         .miniChart {
             width: 100%;
-            height: 110px !important;
-            /* slightly smaller */
-            max-height: 110px;
+            height: 180px !important;
+            max-height: 180px;
             background: #fff;
             border-radius: 12px;
             border: none;
         }
 
+        .sensor-chart-block {
+            margin-bottom: 12px;
+        }
+
+        .sensor-title {
+            font-weight: bold;
+            margin-bottom: 4px;
+            margin-top: 8px;
+        }
+
         .error-message {
             color: red;
             margin-top: 1em;
-        }
-
-        .blurb-box {
-            flex: 0 1 340px;
-            min-width: 220px;
-            max-width: 340px;
-            background: transparent;
-            border: 3px solid #c9dc87;
-            border-radius: 12px;
-            padding: 18px 14px 14px 14px;
-            font-size: 1.08em;
-            color: #134e4a;
-            box-shadow: 0 2px 8px #0001;
-            min-height: 120px;
-            margin-top: 0;
-            margin-bottom: 18px;
-            position: relative;
-            box-sizing: border-box;
-            word-break: break-word;
-            overflow-wrap: break-word;
-        }
-
-        .blurb-label {
-            position: absolute;
-            top: 6px;
-            left: 14px;
-            font-size: 1em;
-            color: #14b8a6;
-            font-weight: bold;
-            background: #fffbe6;
-            padding: 0 8px;
-            pointer-events: none;
-            z-index: 2;
-        }
-
-        @media (max-width: 1200px) {
-            .dashboard-row {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .map-charts-col {
-                width: 95vw;
-                max-width: 98vw;
-            }
-
-            #map,
-            .combined-charts-row {
-                width: 95vw;
-                max-width: 98vw;
-            }
-
-            .blurb-box {
-                width: 95vw;
-                max-width: 98vw;
-                min-width: 0;
-            }
-
-            .combinedChart {
-                min-width: 0;
-            }
-        }
-
-        @media (max-width: 1100px) {
-            .combined-charts-row {
-                width: 98vw;
-                max-width: 98vw;
-            }
-
-            .combinedChart {
-                max-width: 98vw;
-                width: 98vw;
-            }
-        }
-
-        @media (max-width: 950px) {
-            #map {
-                width: 98vw;
-            }
-
-            .combined-charts-row {
-                max-width: 98vw;
-                flex-direction: column;
-                gap: 24px;
-            }
-
-            .combinedChart {
-                width: 100%;
-                max-width: 100vw;
-            }
-
-            .blurb-box {
-                min-width: 0;
-                max-width: 100vw;
-            }
-
-            .controls,
-            #charts {
-                max-width: 98vw;
-            }
-
-            .site-grid {
-                max-width: 98vw;
-            }
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -383,125 +374,122 @@
         <div id="perSiteCharts"></div>
     </div>
 
-    <!-- JavaScript remains unchanged -->
     <script>
-        // ... your JavaScript code from before ...
-        // (No changes needed for layout/fit, as CSS handles the new sizes and centering)
         // Sites list with your colors
-    const sites = [
-      { name: "Tidal Ditch", sn: "z6-32482", lat: 34.7855122, lng: -76.4655264, color: "#1e3a8a" }, // dark blue
-      { name: "Murphy Cemetery", sn: "z6-33251", lat: 34.789873, lng: -76.4655548, color: "#6b7280" }, // grey
-      { name: "Ghost Forest", sn: "z6-33252", lat: 34.7883175, lng: -76.4653989, color: "#10b981" }, // green
-      { name: "Styron Yard", sn: "z6-32414", lat: 34.789731, lng: -76.4612296, color: "#f59e0b" } // yellow
-    ];
-    // Proxy base URL
-    const baseUrl = (window.location.hostname === 'localhost') ? 'http://localhost:3000' : 'https://zentra-proxy.onrender.com';
-    const MAX_PER_PAGE = 1000000;
-    let allDevices = {};
-    let lastSite = null;
-    let perSiteChartInstances = [];
-    let combinedChartInstances = [];
-    const SENSOR_KEYS = [
-      { key: "Water Level", aliases: ["Water Level", "Level"], type: "level" },
-      { key: "Water Temperature", aliases: ["Water Temperature", "Temperature"], type: "temp" },
-      { key: "Conductivity", aliases: ["Conductivity", "EC"], type: "ec" }
-    ];
-    function toFeet(value, unit) {
-      if (!unit) return value;
-      const u = unit.toLowerCase();
-      if (u.includes("meter")) return value * 3.28084;
-      if (u.includes("centimeter") || u === "cm") return value * 0.0328084;
-      if (u.includes("feet") || u === "foot" || u === "ft") return value;
-      return value;
-    }
-    function toFahrenheit(value, unit) {
-      if (!unit) return value;
-      const u = unit.toLowerCase();
-      if (u.startsWith("c")) return value * 9/5 + 32;
-      return value;
-    }
-    function toMsPerInch(value, unit) {
-      if (!unit) return value;
-      const u = unit.toLowerCase();
-      if (u.includes("ms/cm")) return value * 2.54;
-      if (u.includes("µs/cm") || u.includes("us/cm")) return (value / 1000) * 2.54;
-      if (u.includes("ms/inch")) return value;
-      return value;
-    }
-    function destroyCharts(chartArray) {
-      chartArray.forEach(c => { try { c.destroy(); } catch(e) {} });
-      chartArray.length = 0;
-    }
-    // Map with ArcGIS imagery and original markers
-    const map = L.map('map').setView([34.788, -76.464], 15);
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-      attribution: 'Tiles © Esri'
-    }).addTo(map);
-    // Add markers and hover/click handlers
-    sites.forEach(site => {
-      const marker = L.marker([site.lat, site.lng]).addTo(map);
-      marker.bindPopup(`<b>${site.name}</b><br>SN: ${site.sn}`);
-      marker.on('mouseover', function(e) { this.openPopup(); });
-      marker.on('mouseout', function(e) { this.closePopup(); });
-      marker.on('click', () => {
-        showPerSiteCharts(site.sn);
-        document.getElementById('siteSelect').value = site.sn;
-        document.getElementById('perSiteCharts').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
-    });
-    // Populate dropdown
-    const siteSelect = document.getElementById('siteSelect');
-    sites.forEach(site => {
-      const opt = document.createElement('option');
-      opt.value = site.sn;
-      opt.textContent = `${site.name} (${site.sn})`;
-      siteSelect.appendChild(opt);
-    });
-    document.getElementById('fetchSelected').addEventListener('click', () => {
-      const sn = siteSelect.value;
-      if (sn) showPerSiteCharts(sn);
-    });
-    function getDateRangeParams() {
-      const days = parseInt(document.getElementById('range').value, 10);
-      const now = new Date();
-      const start = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-      const startDate = start.toISOString().slice(0, 10);
-      return { perPage: MAX_PER_PAGE, startDate };
-    }
-    function filterReadings(readings, days) {
-      const now = new Date();
-      const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-      return readings.filter(r => new Date(r.datetime) >= cutoff);
-    }
-    function findSensorKey(data, aliases) {
-      for (const key of Object.keys(data)) {
-        for (const a of aliases) {
-          if (key.toLowerCase().includes(a.toLowerCase())) return key;
+        const sites = [
+            { name: "Tidal Ditch", sn: "z6-32482", lat: 34.7855122, lng: -76.4655264, color: "#1e3a8a" }, // dark blue
+            { name: "Murphy Cemetery", sn: "z6-33251", lat: 34.789873, lng: -76.4655548, color: "#6b7280" }, // grey
+            { name: "Ghost Forest", sn: "z6-33252", lat: 34.7883175, lng: -76.4653989, color: "#10b981" }, // green
+            { name: "Styron Yard", sn: "z6-32414", lat: 34.789731, lng: -76.4612296, color: "#f59e0b" } // yellow
+        ];
+        // Proxy base URL
+        const baseUrl = (window.location.hostname === 'localhost') ? 'http://localhost:3000' : 'https://zentra-proxy.onrender.com';
+        const MAX_PER_PAGE = 1000000;
+        let allDevices = {};
+        let lastSite = null;
+        let perSiteChartInstances = [];
+        let combinedChartInstances = [];
+        const SENSOR_KEYS = [
+            { key: "Water Level", aliases: ["Water Level", "Level"], type: "level" },
+            { key: "Water Temperature", aliases: ["Water Temperature", "Temperature"], type: "temp" },
+            { key: "Conductivity", aliases: ["Conductivity", "EC"], type: "ec" }
+        ];
+        function toFeet(value, unit) {
+            if (!unit) return value;
+            const u = unit.toLowerCase();
+            if (u.includes("meter")) return value * 3.28084;
+            if (u.includes("centimeter") || u === "cm") return value * 0.0328084;
+            if (u.includes("feet") || u === "foot" || u === "ft") return value;
+            return value;
         }
-      }
-      return null;
-    }
-    function showPerSiteCharts(sn) {
-      const site = sites.find(s => s.sn === sn);
-      lastSite = sn;
-      const device = allDevices[sn];
-      destroyCharts(perSiteChartInstances);
-      let html = `<div class="site-title" style="color:${site.color}">${site.name} (SN: ${site.sn})</div>`;
-      if (!device || !device.data) {
-        document.getElementById('perSiteCharts').innerHTML = html + '<div>No data available.</div>';
-        return;
-      }
-      html += `<div class="site-grid">`;
-      const rangeDays = parseInt(document.getElementById('range').value, 10);
-      SENSOR_KEYS.forEach(sensor => {
-        const key = findSensorKey(device.data, sensor.aliases);
-        if (!key || !Array.isArray(device.data[key]) || device.data[key].length === 0) return;
-        let readings = device.data[key][0].readings || [];
-        const units = (device.data[key][0].metadata && device.data[key][0].metadata.units) || '';
-        readings = filterReadings(readings, rangeDays);
-        if (readings.length === 0) return;
-        const chartId = `chart-${site.sn}-${sensor.type}`;
-        html += `
+        function toFahrenheit(value, unit) {
+            if (!unit) return value;
+            const u = unit.toLowerCase();
+            if (u.startsWith("c")) return value * 9 / 5 + 32;
+            return value;
+        }
+        function toMsPerInch(value, unit) {
+            if (!unit) return value;
+            const u = unit.toLowerCase();
+            if (u.includes("ms/cm")) return value * 2.54;
+            if (u.includes("µs/cm") || u.includes("us/cm")) return (value / 1000) * 2.54;
+            if (u.includes("ms/inch")) return value;
+            return value;
+        }
+        function destroyCharts(chartArray) {
+            chartArray.forEach(c => { try { c.destroy(); } catch (e) { } });
+            chartArray.length = 0;
+        }
+        // Map with ArcGIS imagery and original markers
+        const map = L.map('map').setView([34.788, -76.464], 15);
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles © Esri'
+        }).addTo(map);
+        // Add markers and hover/click handlers
+        sites.forEach(site => {
+            const marker = L.marker([site.lat, site.lng]).addTo(map);
+            marker.bindPopup(`<b>${site.name}</b><br>SN: ${site.sn}`);
+            marker.on('mouseover', function (e) { this.openPopup(); });
+            marker.on('mouseout', function (e) { this.closePopup(); });
+            marker.on('click', () => {
+                showPerSiteCharts(site.sn);
+                document.getElementById('siteSelect').value = site.sn;
+                document.getElementById('perSiteCharts').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+        // Populate dropdown
+        const siteSelect = document.getElementById('siteSelect');
+        sites.forEach(site => {
+            const opt = document.createElement('option');
+            opt.value = site.sn;
+            opt.textContent = `${site.name} (${site.sn})`;
+            siteSelect.appendChild(opt);
+        });
+        document.getElementById('fetchSelected').addEventListener('click', () => {
+            const sn = siteSelect.value;
+            if (sn) showPerSiteCharts(sn);
+        });
+        function getDateRangeParams() {
+            const days = parseInt(document.getElementById('range').value, 10);
+            const now = new Date();
+            const start = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+            const startDate = start.toISOString().slice(0, 10);
+            return { perPage: MAX_PER_PAGE, startDate };
+        }
+        function filterReadings(readings, days) {
+            const now = new Date();
+            const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+            return readings.filter(r => new Date(r.datetime) >= cutoff);
+        }
+        function findSensorKey(data, aliases) {
+            for (const key of Object.keys(data)) {
+                for (const a of aliases) {
+                    if (key.toLowerCase().includes(a.toLowerCase())) return key;
+                }
+            }
+            return null;
+        }
+        function showPerSiteCharts(sn) {
+            const site = sites.find(s => s.sn === sn);
+            lastSite = sn;
+            const device = allDevices[sn];
+            destroyCharts(perSiteChartInstances);
+            let html = `<div class="site-title" style="color:${site.color}">${site.name} (SN: ${site.sn})</div>`;
+            if (!device || !device.data) {
+                document.getElementById('perSiteCharts').innerHTML = html + '<div>No data available.</div>';
+                return;
+            }
+            html += `<div class="site-grid">`;
+            const rangeDays = parseInt(document.getElementById('range').value, 10);
+            SENSOR_KEYS.forEach(sensor => {
+                const key = findSensorKey(device.data, sensor.aliases);
+                if (!key || !Array.isArray(device.data[key]) || device.data[key].length === 0) return;
+                let readings = device.data[key][0].readings || [];
+                const units = (device.data[key][0].metadata && device.data[key][0].metadata.units) || '';
+                readings = filterReadings(readings, rangeDays);
+                if (readings.length === 0) return;
+                const chartId = `chart-${site.sn}-${sensor.type}`;
+                html += `
           <div class="sensor-chart-block">
             <div class="sensor-title">
               ${sensor.type === "level" ? "Water Level (ft)" : sensor.type === "temp" ? "Water Temperature (°F)" : "Conductivity (mS/inch)"}
@@ -509,217 +497,217 @@
             <canvas id="${chartId}" class="miniChart"></canvas>
           </div>
         `;
-      });
-      html += `</div>`;
-      document.getElementById('perSiteCharts').innerHTML = html;
-      SENSOR_KEYS.forEach(sensor => {
-        const key = findSensorKey(device.data, sensor.aliases);
-        if (!key || !Array.isArray(device.data[key]) || device.data[key].length === 0) return;
-        let readings = device.data[key][0].readings || [];
-        const units = (device.data[key][0].metadata && device.data[key][0].metadata.units) || '';
-        readings = filterReadings(readings, rangeDays);
-        if (readings.length === 0) return;
-        let values, label;
-        if (sensor.type === "level") {
-          values = readings.map(r => toFeet(r.value, units));
-          label = "Water Level (ft)";
-        } else if (sensor.type === "temp") {
-          values = readings.map(r => toFahrenheit(r.value, units));
-          label = "Water Temperature (°F)";
-        } else {
-          values = readings.map(r => toMsPerInch(r.value, units));
-          label = "Conductivity (mS/inch)";
-        }
-        const ctx = document.getElementById(`chart-${site.sn}-${sensor.type}`)?.getContext('2d');
-        if (!ctx) return;
-        const chart = new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: readings.map(r => r.datetime),
-            datasets: [{
-              label,
-              data: values,
-              fill: false,
-              borderColor: site.color,
-              backgroundColor: site.color + "33",
-              borderWidth: 1,
-              tension: 0.1,
-              pointRadius: 0
-            }]
-          },
-          options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: {
-              x: {
-                type: 'time',
-                time: {
-                  parser: 'yyyy-MM-dd HH:mm:ssXXX',
-                  tooltipFormat: 'PP HH:mm',
-                  unit: 'hour',
-                  displayFormats: { hour: 'MMM d, HH:mm' }
+            });
+            html += `</div>`;
+            document.getElementById('perSiteCharts').innerHTML = html;
+            SENSOR_KEYS.forEach(sensor => {
+                const key = findSensorKey(device.data, sensor.aliases);
+                if (!key || !Array.isArray(device.data[key]) || device.data[key].length === 0) return;
+                let readings = device.data[key][0].readings || [];
+                const units = (device.data[key][0].metadata && device.data[key][0].metadata.units) || '';
+                readings = filterReadings(readings, rangeDays);
+                if (readings.length === 0) return;
+                let values, label;
+                if (sensor.type === "level") {
+                    values = readings.map(r => toFeet(r.value, units));
+                    label = "Water Level (ft)";
+                } else if (sensor.type === "temp") {
+                    values = readings.map(r => toFahrenheit(r.value, units));
+                    label = "Water Temperature (°F)";
+                } else {
+                    values = readings.map(r => toMsPerInch(r.value, units));
+                    label = "Conductivity (mS/inch)";
                 }
-              },
-              y: { beginAtZero: false }
-            },
-            animation: false
-          }
-        });
-        perSiteChartInstances.push(chart);
-      });
-    }
-    function renderCombinedCharts() {
-      destroyCharts(combinedChartInstances);
-      const levelCtx = document.getElementById('combined-level').getContext('2d');
-      const ecCtx = document.getElementById('combined-ec').getContext('2d');
-      const range = parseInt(document.getElementById('range').value, 10);
-      const levelDatasets = [];
-      const ecDatasets = [];
-      sites.forEach(site => {
-        const device = allDevices[site.sn];
-        if (!device || !device.data) return;
-        const lKey = findSensorKey(device.data, ["Water Level", "Level"]);
-        if (lKey && Array.isArray(device.data[lKey]) && device.data[lKey].length > 0) {
-          let readings = device.data[lKey][0].readings || [];
-          const units = (device.data[lKey][0].metadata && device.data[lKey][0].metadata.units) || '';
-          readings = filterReadings(readings, range);
-          if (readings.length > 0) {
-            levelDatasets.push({
-              label: site.name,
-              data: readings.map(r => ({ x: r.datetime, y: toFeet(r.value, units) })),
-              borderColor: site.color,
-              backgroundColor: site.color + "33",
-              borderWidth: 1,
-              fill: false,
-              tension: 0.1,
-              pointRadius: 0
+                const ctx = document.getElementById(`chart-${site.sn}-${sensor.type}`)?.getContext('2d');
+                if (!ctx) return;
+                const chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: readings.map(r => r.datetime),
+                        datasets: [{
+                            label,
+                            data: values,
+                            fill: false,
+                            borderColor: site.color,
+                            backgroundColor: site.color + "33",
+                            borderWidth: 1,
+                            tension: 0.1,
+                            pointRadius: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    parser: 'yyyy-MM-dd HH:mm:ssXXX',
+                                    tooltipFormat: 'PP HH:mm',
+                                    unit: 'hour',
+                                    displayFormats: { hour: 'MMM d, HH:mm' }
+                                }
+                            },
+                            y: { beginAtZero: false }
+                        },
+                        animation: false
+                    }
+                });
+                perSiteChartInstances.push(chart);
             });
-          }
         }
-        const eKey = findSensorKey(device.data, ["Conductivity", "EC"]);
-        if (eKey && Array.isArray(device.data[eKey]) && device.data[eKey].length > 0) {
-          let readings = device.data[eKey][0].readings || [];
-          const units = (device.data[eKey][0].metadata && device.data[eKey][0].metadata.units) || '';
-          readings = filterReadings(readings, range);
-          if (readings.length > 0) {
-            ecDatasets.push({
-              label: site.name,
-              data: readings.map(r => ({ x: r.datetime, y: toMsPerInch(r.value, units) })),
-              borderColor: site.color,
-              backgroundColor: site.color + "33",
-              borderWidth: 1,
-              fill: false,
-              tension: 0.1,
-              pointRadius: 0
+        function renderCombinedCharts() {
+            destroyCharts(combinedChartInstances);
+            const levelCtx = document.getElementById('combined-level').getContext('2d');
+            const ecCtx = document.getElementById('combined-ec').getContext('2d');
+            const range = parseInt(document.getElementById('range').value, 10);
+            const levelDatasets = [];
+            const ecDatasets = [];
+            sites.forEach(site => {
+                const device = allDevices[site.sn];
+                if (!device || !device.data) return;
+                const lKey = findSensorKey(device.data, ["Water Level", "Level"]);
+                if (lKey && Array.isArray(device.data[lKey]) && device.data[lKey].length > 0) {
+                    let readings = device.data[lKey][0].readings || [];
+                    const units = (device.data[lKey][0].metadata && device.data[lKey][0].metadata.units) || '';
+                    readings = filterReadings(readings, range);
+                    if (readings.length > 0) {
+                        levelDatasets.push({
+                            label: site.name,
+                            data: readings.map(r => ({ x: r.datetime, y: toFeet(r.value, units) })),
+                            borderColor: site.color,
+                            backgroundColor: site.color + "33",
+                            borderWidth: 1,
+                            fill: false,
+                            tension: 0.1,
+                            pointRadius: 0
+                        });
+                    }
+                }
+                const eKey = findSensorKey(device.data, ["Conductivity", "EC"]);
+                if (eKey && Array.isArray(device.data[eKey]) && device.data[eKey].length > 0) {
+                    let readings = device.data[eKey][0].readings || [];
+                    const units = (device.data[eKey][0].metadata && device.data[eKey][0].metadata.units) || '';
+                    readings = filterReadings(readings, range);
+                    if (readings.length > 0) {
+                        ecDatasets.push({
+                            label: site.name,
+                            data: readings.map(r => ({ x: r.datetime, y: toMsPerInch(r.value, units) })),
+                            borderColor: site.color,
+                            backgroundColor: site.color + "33",
+                            borderWidth: 1,
+                            fill: false,
+                            tension: 0.1,
+                            pointRadius: 0
+                        });
+                    }
+                }
             });
-          }
+            const levelChart = new Chart(levelCtx, {
+                type: 'line',
+                data: { datasets: levelDatasets },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: true } },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                parser: 'yyyy-MM-dd HH:mm:ssXXX',
+                                tooltipFormat: 'PP HH:mm',
+                                unit: 'hour',
+                                displayFormats: { hour: 'MMM d, HH:mm' }
+                            },
+                            title: { display: true, text: 'Timestamp' }
+                        },
+                        y: { beginAtZero: false, title: { display: true, text: 'Water Level (ft)' } }
+                    },
+                    animation: false
+                }
+            });
+            const ecChart = new Chart(ecCtx, {
+                type: 'line',
+                data: { datasets: ecDatasets },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: true } },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                parser: 'yyyy-MM-dd HH:mm:ssXXX',
+                                tooltipFormat: 'PP HH:mm',
+                                unit: 'hour',
+                                displayFormats: { hour: 'MMM d, HH:mm' }
+                            },
+                            title: { display: true, text: 'Timestamp' }
+                        },
+                        y: { beginAtZero: false, title: { display: true, text: 'Conductivity (mS/inch)' } }
+                    },
+                    animation: false
+                }
+            });
+            combinedChartInstances.push(levelChart, ecChart);
         }
-      });
-      const levelChart = new Chart(levelCtx, {
-        type: 'line',
-        data: { datasets: levelDatasets },
-        options: {
-          responsive: true,
-          plugins: { legend: { display: true } },
-          scales: {
-            x: {
-              type: 'time',
-              time: {
-                parser: 'yyyy-MM-dd HH:mm:ssXXX',
-                tooltipFormat: 'PP HH:mm',
-                unit: 'hour',
-                displayFormats: { hour: 'MMM d, HH:mm' }
-              },
-              title: { display: true, text: 'Timestamp' }
-            },
-            y: { beginAtZero: false, title: { display: true, text: 'Water Level (ft)' } }
-          },
-          animation: false
-        }
-      });
-      const ecChart = new Chart(ecCtx, {
-        type: 'line',
-        data: { datasets: ecDatasets },
-        options: {
-          responsive: true,
-          plugins: { legend: { display: true } },
-          scales: {
-            x: {
-              type: 'time',
-              time: {
-                parser: 'yyyy-MM-dd HH:mm:ssXXX',
-                tooltipFormat: 'PP HH:mm',
-                unit: 'hour',
-                displayFormats: { hour: 'MMM d, HH:mm' }
-              },
-              title: { display: true, text: 'Timestamp' }
-            },
-            y: { beginAtZero: false, title: { display: true, text: 'Conductivity (mS/inch)' } }
-          },
-          animation: false
-        }
-      });
-      combinedChartInstances.push(levelChart, ecChart);
-    }
-    function showApiError(message) {
-      document.getElementById('loadingMessage').textContent = '';
-      document.getElementById('perSiteCharts').innerHTML = '';
-      document.getElementById('combinedCharts').innerHTML = `
+        function showApiError(message) {
+            document.getElementById('loadingMessage').textContent = '';
+            document.getElementById('perSiteCharts').innerHTML = '';
+            document.getElementById('combinedCharts').innerHTML = `
         <div class="error-message">
           ${message || 'Unable to load data from Zentra API (limit reached or network error).'}
         </div>`;
-    }
-    async function fetchDeviceFromProxy(sn, perPage, startDate) {
-      const params = new URLSearchParams();
-      params.set('device_sn', sn);
-      if (perPage) params.set('per_page', perPage);
-      if (startDate) params.set('start_date', startDate);
-      const url = `${baseUrl}/zentra?${params.toString()}`;
-      const res = await fetch(url);
-      if (!res.ok) {
-        const text = await res.text().catch(() => '');
-        throw new Error(`Proxy error ${res.status}: ${text}`);
-      }
-      const json = await res.json();
-      if (!json || !Array.isArray(json.devices) || json.devices.length === 0) {
-        throw new Error('No device data returned');
-      }
-      const device = json.devices[0];
-      if (device && device.error) {
-        throw new Error(`Zentra error for ${device.device_sn}: ${device.status} - ${device.body}`);
-      }
-      return device;
-    }
-    async function loadAllSites() {
-      document.getElementById('loadingMessage').textContent = 'Loading all sites...';
-      document.getElementById('perSiteCharts').innerHTML = '';
-      destroyCharts(perSiteChartInstances);
-      allDevices = {};
-      const { perPage, startDate } = getDateRangeParams();
-      try {
-        await Promise.all(sites.map(async site => {
-          try {
-            const device = await fetchDeviceFromProxy(site.sn, perPage, startDate);
-            allDevices[site.sn] = device;
-          } catch (e) {
-            allDevices[site.sn] = null;
-            console.warn('Failed to load', site.sn, e);
-          }
-        }));
-      } catch (e) {
-        showApiError(e.message);
-        return;
-      }
-      renderCombinedCharts();
-      const ts = new Date().toLocaleString();
-      document.getElementById('lastUpdated').textContent = `Data loaded: ${ts}`;
-      if (lastSite) showPerSiteCharts(lastSite);
-      document.getElementById('loadingMessage').textContent = '';
-    }
-    document.getElementById('range').addEventListener('change', () => {
-      loadAllSites();
-    });
-    loadAllSites();
+        }
+        async function fetchDeviceFromProxy(sn, perPage, startDate) {
+            const params = new URLSearchParams();
+            params.set('device_sn', sn);
+            if (perPage) params.set('per_page', perPage);
+            if (startDate) params.set('start_date', startDate);
+            const url = `${baseUrl}/zentra?${params.toString()}`;
+            const res = await fetch(url);
+            if (!res.ok) {
+                const text = await res.text().catch(() => '');
+                throw new Error(`Proxy error ${res.status}: ${text}`);
+            }
+            const json = await res.json();
+            if (!json || !Array.isArray(json.devices) || json.devices.length === 0) {
+                throw new Error('No device data returned');
+            }
+            const device = json.devices[0];
+            if (device && device.error) {
+                throw new Error(`Zentra error for ${device.device_sn}: ${device.status} - ${device.body}`);
+            }
+            return device;
+        }
+        async function loadAllSites() {
+            document.getElementById('loadingMessage').textContent = 'Loading all sites...';
+            document.getElementById('perSiteCharts').innerHTML = '';
+            destroyCharts(perSiteChartInstances);
+            allDevices = {};
+            const { perPage, startDate } = getDateRangeParams();
+            try {
+                await Promise.all(sites.map(async site => {
+                    try {
+                        const device = await fetchDeviceFromProxy(site.sn, perPage, startDate);
+                        allDevices[site.sn] = device;
+                    } catch (e) {
+                        allDevices[site.sn] = null;
+                        console.warn('Failed to load', site.sn, e);
+                    }
+                }));
+            } catch (e) {
+                showApiError(e.message);
+                return;
+            }
+            renderCombinedCharts();
+            const ts = new Date().toLocaleString();
+            document.getElementById('lastUpdated').textContent = `Data loaded: ${ts}`;
+            if (lastSite) showPerSiteCharts(lastSite);
+            document.getElementById('loadingMessage').textContent = '';
+        }
+        document.getElementById('range').addEventListener('change', () => {
+            loadAllSites();
+        });
+        loadAllSites();
     </script>
 </body>
 
