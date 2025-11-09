@@ -205,15 +205,13 @@
 
         .combinedChart {
             width: 100%;
-            max-width: 800px;
-            /* wider */
-            aspect-ratio: 16/9;
+            max-width: 650px;
+            height: 300px !important;
             background: #fff;
             border-radius: 12px;
             border: none;
             box-sizing: border-box;
             min-width: 220px;
-            height: auto !important;
         }
 
         .chart-label,
@@ -254,19 +252,17 @@
 
         .miniChart {
             width: 100%;
-            max-width: 540px;
-            /* wider */
-            aspect-ratio: 16/11;
+            max-width: 440px;
+            height: 220px !important;
             background: #fff;
             border-radius: 12px;
             border: none;
-            height: auto !important;
         }
 
         .sensor-chart-block {
             margin-bottom: 12px;
             width: 100%;
-            max-width: 540px;
+            max-width: 440px;
         }
 
         .sensor-title {
@@ -329,31 +325,26 @@
                 padding: 0;
             }
 
-            .combinedChart,
-            .miniChart,
-            .sensor-chart-block {
+            .combinedChart {
                 max-width: 100vw !important;
                 width: 100% !important;
-            }
-
-            .combinedChart {
-                aspect-ratio: 16/9 !important;
-                height: auto !important;
-                min-height: 160px;
-                margin-bottom: 12px;
+                height: 180px !important;
             }
 
             .miniChart {
-                aspect-ratio: 16/11 !important;
-                height: auto !important;
-                min-height: 120px;
-                margin-bottom: 12px;
+                max-width: 100vw !important;
+                width: 100% !important;
+                height: 120px !important;
             }
 
             .site-grid {
                 flex-direction: column !important;
                 gap: 12px !important;
                 align-items: stretch !important;
+            }
+
+            .sensor-chart-block {
+                max-width: 100vw !important;
             }
 
             .chart-label,
@@ -402,15 +393,11 @@
             <div class="combined-charts-row">
                 <div style="display:flex;flex-direction:column;">
                     <div class="chart-label">All Sites - Water Level (ft)</div>
-                    <div style="width:100%;aspect-ratio:16/9;">
-                        <canvas id="combined-level" class="combinedChart"></canvas>
-                    </div>
+                    <canvas id="combined-level" class="combinedChart"></canvas>
                 </div>
                 <div style="display:flex;flex-direction:column;">
                     <div class="chart-label">All Sites - Conductivity (mS/inch)</div>
-                    <div style="width:100%;aspect-ratio:16/9;">
-                        <canvas id="combined-ec" class="combinedChart"></canvas>
-                    </div>
+                    <canvas id="combined-ec" class="combinedChart"></canvas>
                 </div>
             </div>
             <div id="perSiteCharts"></div>
@@ -419,7 +406,6 @@
     <div id="charts">
         <div class="loading" id="loadingMessage">Loading all sites...</div>
     </div>
-    <!-- JavaScript unchanged from previous version -->
     <script>
         // SN to scientific name mapping
         const snToSci = {
@@ -547,9 +533,7 @@
             <div class="sensor-title">
               ${sensor.type === "level" ? "Water Level (ft)" : sensor.type === "temp" ? "Water Temperature (°F)" : "Conductivity (mS/inch)"}
             </div>
-            <div style="width:100%;aspect-ratio:16/11;">
-                <canvas id="${chartId}" class="miniChart"></canvas>
-            </div>
+            <canvas id="${chartId}" class="miniChart"></canvas>
           </div>
         `;
             });
@@ -585,21 +569,21 @@
                             fill: false,
                             borderColor: site.color,
                             backgroundColor: site.color + "33",
-                            borderWidth: 3,
+                            borderWidth: 1, // original thin line
                             tension: 0.1,
-                            pointRadius: 2
+                            pointRadius: 0
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
-                            legend: { display: false, labels: { font: { size: 14 } } },
+                            legend: { display: false },
                             title: { display: false }
                         },
                         elements: {
-                            line: { borderWidth: 3 },
-                            point: { radius: 2 }
+                            line: { borderWidth: 1 },
+                            point: { radius: 0 }
                         },
                         scales: {
                             x: {
@@ -609,13 +593,9 @@
                                     tooltipFormat: 'PP HH:mm',
                                     unit: 'hour',
                                     displayFormats: { hour: 'MMM d, HH:mm' }
-                                },
-                                ticks: { font: { size: 12 } }
+                                }
                             },
-                            y: {
-                                beginAtZero: false,
-                                ticks: { font: { size: 12 } }
-                            }
+                            y: { beginAtZero: false }
                         },
                         animation: false
                     }
@@ -644,10 +624,10 @@
                             data: readings.map(r => ({ x: r.datetime, y: toFeet(r.value, units) })),
                             borderColor: site.color,
                             backgroundColor: site.color + "33",
-                            borderWidth: 3,
+                            borderWidth: 1, // original thin line
                             fill: false,
                             tension: 0.1,
-                            pointRadius: 2
+                            pointRadius: 0
                         });
                     }
                 }
@@ -662,10 +642,10 @@
                             data: readings.map(r => ({ x: r.datetime, y: toMsPerInch(r.value, units) })),
                             borderColor: site.color,
                             backgroundColor: site.color + "33",
-                            borderWidth: 3,
+                            borderWidth: 1, // original thin line
                             fill: false,
                             tension: 0.1,
-                            pointRadius: 2
+                            pointRadius: 0
                         });
                     }
                 }
@@ -677,12 +657,12 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { display: true, labels: { font: { size: 14 } } },
+                        legend: { display: true },
                         title: { display: false }
                     },
                     elements: {
-                        line: { borderWidth: 3 },
-                        point: { radius: 2 }
+                        line: { borderWidth: 1 },
+                        point: { radius: 0 }
                     },
                     scales: {
                         x: {
@@ -693,13 +673,11 @@
                                 unit: 'hour',
                                 displayFormats: { hour: 'MMM d, HH:mm' }
                             },
-                            title: { display: true, text: 'Timestamp' },
-                            ticks: { font: { size: 12 } }
+                            title: { display: true, text: 'Timestamp' }
                         },
                         y: {
                             beginAtZero: false,
-                            title: { display: true, text: 'Water Level (ft)' },
-                            ticks: { font: { size: 12 } }
+                            title: { display: true, text: 'Water Level (ft)' }
                         }
                     },
                     animation: false
@@ -712,12 +690,12 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { display: true, labels: { font: { size: 14 } } },
+                        legend: { display: true },
                         title: { display: false }
                     },
                     elements: {
-                        line: { borderWidth: 3 },
-                        point: { radius: 2 }
+                        line: { borderWidth: 1 },
+                        point: { radius: 0 }
                     },
                     scales: {
                         x: {
@@ -728,13 +706,11 @@
                                 unit: 'hour',
                                 displayFormats: { hour: 'MMM d, HH:mm' }
                             },
-                            title: { display: true, text: 'Timestamp' },
-                            ticks: { font: { size: 12 } }
+                            title: { display: true, text: 'Timestamp' }
                         },
                         y: {
                             beginAtZero: false,
-                            title: { display: true, text: 'Conductivity (mS/inch)' },
-                            ticks: { font: { size: 12 } }
+                            title: { display: true, text: 'Conductivity (mS/inch)' }
                         }
                     },
                     animation: false
