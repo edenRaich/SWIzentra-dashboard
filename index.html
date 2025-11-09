@@ -300,6 +300,15 @@
 
         /* --- MOBILE IMPROVEMENTS: Only applies on screens <= 600px wide --- */
         @media (max-width: 600px) {
+            .banner-title {
+                font-size: 1.1rem !important;
+                max-width: 90vw !important;
+                white-space: normal !important;
+            }
+
+            .title-break {
+                display: inline;
+            }
 
             .dashboard-row,
             .main-content,
@@ -334,11 +343,6 @@
                 padding: 0 4vw !important;
             }
 
-            .banner-title {
-                font-size: 1.1rem !important;
-                max-width: 60vw !important;
-            }
-
             .banner-logo {
                 height: 48px !important;
                 margin-left: 8px !important;
@@ -353,6 +357,12 @@
                 padding-right: 2vw !important;
             }
         }
+
+        @media (min-width: 601px) {
+            .title-break {
+                display: none;
+            }
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script
@@ -364,7 +374,11 @@
 <body>
     <!-- Banner Header -->
     <div class="banner-header">
-        <h1 class="banner-title">Down East Salt Water Intrusion Monitoring System</h1>
+        <h1 class="banner-title">
+            <span class="title-first">Down East</span>
+            <span class="title-break"><br></span>
+            <span class="title-rest">Salt Water Intrusion Monitoring System</span>
+        </h1>
         <img src="Logo.png" alt="Logo" class="banner-logo">
     </div>
     <div class="dashboard-row">
