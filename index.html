@@ -21,14 +21,14 @@
 
         .banner-header {
             width: 100%;
-            height: 200px;
+            min-height: 100px;
             background: url('TitleImage.png') center center/cover no-repeat;
             display: flex;
             align-items: flex-start;
             justify-content: flex-start;
             position: relative;
             margin-bottom: 30px;
-            padding: 0 40px;
+            padding: 0 4vw;
             box-sizing: border-box;
         }
 
@@ -54,7 +54,8 @@
         }
 
         .banner-logo {
-            height: 160px;
+            max-width: 40vw;
+            height: auto;
             background: none;
             box-shadow: none;
             border: none;
@@ -70,14 +71,35 @@
             }
 
             .banner-header {
-                height: 120px;
-                padding: 0 10px;
+                min-height: 60px;
+                padding: 0 2vw;
             }
 
             .banner-logo {
-                height: 90px;
+                max-width: 60vw;
                 margin-top: 10px;
                 margin-left: 20px;
+            }
+        }
+
+        @media (max-width: 600px) {
+
+            .banner-title,
+            .blurb-label {
+                font-size: 1.2em;
+            }
+
+            .banner-header {
+                flex-direction: column;
+                align-items: flex-start;
+                min-height: 60px;
+                padding: 0 2vw;
+            }
+
+            .banner-logo {
+                margin-left: 0;
+                margin-top: 10px;
+                max-width: 80vw;
             }
         }
 
@@ -85,19 +107,10 @@
             display: flex;
             flex-direction: row;
             align-items: flex-start;
-            gap: 0;
-            margin-bottom: 18px;
             width: 100%;
             box-sizing: border-box;
-            padding-left: 24px;
-            padding-right: 24px;
-        }
-
-        .map-blurb-row {
-            display: flex;
-            flex-direction: row;
-            align-items: flex-start;
-            width: 100%;
+            padding-left: 4vw;
+            padding-right: 4vw;
         }
 
         .main-content {
@@ -105,25 +118,37 @@
             flex-direction: column;
             align-items: flex-start;
             flex: 1 1 auto;
+            width: 100%;
+        }
+
+        .map-blurb-row {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            width: 100%;
+            gap: 16px;
         }
 
         #map {
-            width: 900px;
-            max-width: 100%;
-            height: 500px;
+            width: 100% !important;
+            max-width: 100vw;
+            height: 40vw;
+            min-height: 220px;
+            max-height: 60vw;
             border-radius: 10px;
             box-shadow: 0 2px 8px #0001;
             background: #fff;
             margin-bottom: 24px;
             border: none;
             box-sizing: border-box;
-            min-width: 320px;
         }
 
         .blurb-box {
-            min-width: 300px;
-            width: 400px;
-            max-width: 100%;
+            width: 100%;
+            min-width: 0;
+            max-width: 100vw;
+            min-height: 180px;
+            height: auto;
             background: #c9dc87;
             border: 3px solid #c9dc87;
             border-radius: 12px;
@@ -131,9 +156,7 @@
             font-size: 1.08em;
             color: #134e4a;
             box-shadow: 0 2px 8px #0001;
-            min-height: 500px;
-            height: 500px;
-            margin-left: 24px;
+            margin-left: 0;
             margin-top: 0;
             margin-bottom: 18px;
             position: relative;
@@ -158,32 +181,29 @@
             align-self: flex-start;
         }
 
-        @media (max-width: 1400px) {
-            #map {
-                width: 98vw;
+        @media (max-width: 1200px) {
+            .map-blurb-row {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 16px;
             }
 
+            #map,
             .blurb-box {
-                width: 98vw;
-                min-width: 0;
+                width: 100% !important;
+                max-width: 100vw;
+                margin-left: 0;
+                margin-top: 0;
             }
         }
 
-        @media (max-width: 1200px) {
-            #map {
-                width: 98vw;
-            }
+        @media (max-width: 600px) {
 
+            #map,
             .blurb-box {
-                width: 98vw;
-                min-width: 0;
-                margin-left: 0;
-                margin-top: 24px;
-            }
-
-            .map-blurb-row {
-                flex-direction: column;
-                align-items: center;
+                height: 50vw;
+                min-height: 160px;
+                max-height: 70vw;
             }
         }
 
@@ -211,14 +231,17 @@
             align-items: flex-start;
             width: 100%;
             margin-bottom: 32px;
-            padding-left: 24px;
-            padding-right: 24px;
+            padding-left: 4vw;
+            padding-right: 4vw;
             box-sizing: border-box;
         }
 
         .combinedChart {
-            width: 600px;
-            height: 300px !important;
+            width: 100% !important;
+            max-width: 100vw;
+            height: 40vw !important;
+            min-height: 220px;
+            max-height: 60vw;
             background: #fff;
             border-radius: 12px;
             border: none;
@@ -255,14 +278,17 @@
             gap: 32px;
             margin-bottom: 24px;
             width: 100%;
-            padding-left: 24px;
-            padding-right: 24px;
+            padding-left: 4vw;
+            padding-right: 4vw;
             box-sizing: border-box;
         }
 
         .miniChart {
-            width: 400px;
-            height: 220px !important;
+            width: 100% !important;
+            max-width: 100vw;
+            height: 40vw !important;
+            min-height: 160px;
+            max-height: 60vw;
             background: #fff;
             border-radius: 12px;
             border: none;
@@ -270,6 +296,7 @@
 
         .sensor-chart-block {
             margin-bottom: 12px;
+            width: 100%;
         }
 
         .sensor-title {
@@ -296,6 +323,28 @@
             margin-top: 24px;
             padding-left: 8px;
             padding-right: 8px;
+        }
+
+        /* Responsive stacking for site grid and combined charts */
+        @media (max-width: 900px) {
+
+            .combined-charts-row,
+            .site-grid {
+                flex-direction: column;
+                gap: 16px;
+                padding-left: 2vw;
+                padding-right: 2vw;
+            }
+        }
+
+        @media (max-width: 600px) {
+
+            .dashboard-row,
+            .combined-charts-row,
+            .site-grid {
+                padding-left: 1vw;
+                padding-right: 1vw;
+            }
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -334,11 +383,11 @@
                 <span id="lastUpdated" style="color:#64748b;"></span>
             </div>
             <div class="combined-charts-row">
-                <div style="display:flex;flex-direction:column;">
+                <div style="display:flex;flex-direction:column;width:100%;">
                     <div class="chart-label">All Sites - Water Level (ft)</div>
                     <canvas id="combined-level" class="combinedChart"></canvas>
                 </div>
-                <div style="display:flex;flex-direction:column;">
+                <div style="display:flex;flex-direction:column;width:100%;">
                     <div class="chart-label">All Sites - Conductivity (mS/inch)</div>
                     <canvas id="combined-ec" class="combinedChart"></canvas>
                 </div>
@@ -349,7 +398,9 @@
     <div id="charts">
         <div class="loading" id="loadingMessage">Loading all sites...</div>
     </div>
+    <!-- Your JavaScript remains unchanged -->
     <script>
+        // ... (your JavaScript code here, unchanged)
         // SN to scientific name mapping
         const snToSci = {
             "z6-33252": "GF2501",
