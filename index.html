@@ -35,7 +35,7 @@
         }
 
         .banner-title {
-            font-size: 2.5rem;
+            font-size: 2.7rem;
             color: #02590f;
             font-weight: bold;
             margin: 0;
@@ -57,15 +57,13 @@
         }
 
         .banner-logo {
-            height: 110px;
-            /* Slightly smaller */
+            height: 120px;
             background: none;
             box-shadow: none;
             border: none;
             align-self: flex-start;
             margin-top: 22px;
             margin-left: 18px;
-            /* Closer to title */
             max-width: 22vw;
             width: auto;
         }
@@ -82,7 +80,7 @@
             }
 
             .banner-logo {
-                height: 60px;
+                height: 70px;
                 margin-top: 6px;
                 margin-left: 8px;
             }
@@ -103,8 +101,8 @@
         .map-blurb-row {
             display: flex;
             flex-direction: row;
-            /* Blurb on left, map on right */
             align-items: stretch;
+            /* Make blurb and map same height */
             width: 100%;
             gap: 2vw;
             min-width: 0;
@@ -130,8 +128,8 @@
             border: none;
             box-sizing: border-box;
             flex: 1 1 0;
-            min-height: 220px;
-            max-height: 500px;
+            min-height: 320px;
+            max-height: 600px;
         }
 
         .blurb-box {
@@ -146,6 +144,7 @@
             color: #134e4a;
             box-shadow: 0 2px 8px #0001;
             height: 100%;
+            /* Match map height */
             margin-left: 0;
             margin-top: 0;
             margin-bottom: 18px;
@@ -157,14 +156,14 @@
             display: flex;
             flex-direction: column;
             justify-content: flex-start;
-            min-height: 220px;
+            min-height: 320px;
         }
 
         .blurb-label {
             font-size: 2rem;
             color: #02590f;
             font-weight: bold;
-            margin: 0;
+            margin: 0 0 8px 0;
             padding: 0;
             background: none;
             border: none;
@@ -172,10 +171,10 @@
             align-self: flex-start;
         }
 
-        /* Only stack blurb above map on very small screens */
         @media (max-width: 600px) {
             .map-blurb-row {
                 flex-direction: column !important;
+                align-items: stretch !important;
             }
 
             .blurb-box {
@@ -219,11 +218,11 @@
         .combined-charts-row {
             display: flex;
             flex-direction: row;
-            gap: 24px;
+            gap: 32px;
             justify-content: center;
             align-items: flex-start;
             width: 100%;
-            margin-bottom: 24px;
+            margin-bottom: 32px;
             padding-left: 2vw;
             padding-right: 2vw;
             box-sizing: border-box;
@@ -234,10 +233,8 @@
         .combinedChart {
             width: 100%;
             max-width: 600px;
-            aspect-ratio: 2.5/1;
-            min-width: 220px;
-            min-height: 120px;
-            max-height: 240px;
+            height: 380px !important;
+            /* Taller */
             background: #fff;
             border-radius: 12px;
             border: none;
@@ -252,7 +249,8 @@
             .combinedChart {
                 max-width: 400px;
                 min-width: 160px;
-                max-height: 180px;
+                max-height: 260px;
+                height: 260px !important;
             }
         }
 
@@ -266,8 +264,7 @@
             .combinedChart {
                 max-width: 100vw !important;
                 min-width: 120px;
-                aspect-ratio: 2/1;
-                max-height: 160px;
+                height: 200px !important;
             }
         }
 
@@ -298,8 +295,8 @@
             flex-direction: row;
             justify-content: center;
             align-items: flex-start;
-            gap: 24px;
-            margin-bottom: 18px;
+            gap: 32px;
+            margin-bottom: 24px;
             width: 100%;
             padding-left: 2vw;
             padding-right: 2vw;
@@ -307,29 +304,18 @@
             overflow-x: auto;
         }
 
-        /* Stack site-specific charts vertically on small screens */
-        @media (max-width: 900px) {
-            .site-grid {
-                flex-direction: column !important;
-                gap: 18px !important;
-                align-items: stretch !important;
-            }
-        }
-
         .miniChart {
             width: 100%;
             max-width: 400px;
-            aspect-ratio: 2.5/1;
-            min-width: 120px;
-            min-height: 80px;
-            max-height: 160px;
+            height: 300px !important;
+            /* Taller */
             background: #fff;
             border-radius: 12px;
             border: none;
         }
 
         .sensor-chart-block {
-            margin-bottom: 8px;
+            margin-bottom: 12px;
             width: 100%;
             max-width: 400px;
         }
@@ -376,10 +362,10 @@
     <div class="dashboard-row">
         <div class="main-content">
             <div class="map-blurb-row">
-                <div class="blurb-box">
-                    <span class="blurb-label"></span>
-                </div>
                 <div id="map"></div>
+                <div class="blurb-box">
+                    <span class="blurb-label">Blurb</span>
+                </div>
             </div>
             <div class="controls">
                 <label for="range">Show data for: </label>
