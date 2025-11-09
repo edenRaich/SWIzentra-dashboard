@@ -303,8 +303,10 @@
                 width: 100% !important;
                 max-width: 100vw !important;
                 height: auto !important;
-                min-height: 100px;
-                margin-bottom: 10px;
+                min-height: 120px;
+                margin-bottom: 14px;
+                font-size: 1.15em;
+                padding: 18px 14px 16px 14px;
             }
 
             #map {
@@ -312,14 +314,16 @@
                 width: 100% !important;
                 max-width: 100vw !important;
                 min-width: 180px;
-                aspect-ratio: 16/9;
-                min-height: 160px;
-                max-height: 260px;
+                min-height: 260px;
+                height: 260px !important;
+                max-height: 340px;
+                aspect-ratio: unset;
+                margin-bottom: 18px;
             }
 
             .combined-charts-row {
                 flex-direction: column !important;
-                gap: 18px !important;
+                gap: 22px !important;
                 align-items: stretch !important;
                 width: 100%;
                 padding: 0;
@@ -328,18 +332,18 @@
             .combinedChart {
                 max-width: 100vw !important;
                 width: 100% !important;
-                height: 180px !important;
+                height: 220px !important;
             }
 
             .miniChart {
                 max-width: 100vw !important;
                 width: 100% !important;
-                height: 120px !important;
+                height: 150px !important;
             }
 
             .site-grid {
                 flex-direction: column !important;
-                gap: 12px !important;
+                gap: 18px !important;
                 align-items: stretch !important;
             }
 
@@ -349,9 +353,9 @@
 
             .chart-label,
             .sensor-title {
-                font-size: 1.1em;
-                margin-top: 8px;
-                margin-bottom: 4px;
+                font-size: 1.2em;
+                margin-top: 10px;
+                margin-bottom: 6px;
             }
         }
     </style>
@@ -569,7 +573,7 @@
                             fill: false,
                             borderColor: site.color,
                             backgroundColor: site.color + "33",
-                            borderWidth: 1, // original thin line
+                            borderWidth: 1,
                             tension: 0.1,
                             pointRadius: 0
                         }]
@@ -624,7 +628,7 @@
                             data: readings.map(r => ({ x: r.datetime, y: toFeet(r.value, units) })),
                             borderColor: site.color,
                             backgroundColor: site.color + "33",
-                            borderWidth: 1, // original thin line
+                            borderWidth: 1,
                             fill: false,
                             tension: 0.1,
                             pointRadius: 0
@@ -642,7 +646,7 @@
                             data: readings.map(r => ({ x: r.datetime, y: toMsPerInch(r.value, units) })),
                             borderColor: site.color,
                             backgroundColor: site.color + "33",
-                            borderWidth: 1, // original thin line
+                            borderWidth: 1,
                             fill: false,
                             tension: 0.1,
                             pointRadius: 0
