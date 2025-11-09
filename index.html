@@ -42,7 +42,17 @@
             padding: 0;
             border: none;
             background: none;
-            text-shadow: 2px 2px 8px rgba(255, 255, 255, 0.2);
+            /* Black border effect */
+            text-shadow:
+                -2px -2px 0 #000,
+                2px -2px 0 #000,
+                -2px 2px 0 #000,
+                2px 2px 0 #000,
+                0px 2px 0 #000,
+                2px 0px 0 #000,
+                0px -2px 0 #000,
+                -2px 0px 0 #000,
+                2px 2px 8px rgba(255, 255, 255, 0.2);
             letter-spacing: 1px;
             flex: 1 1 0;
             text-align: left;
@@ -57,14 +67,15 @@
         }
 
         .banner-logo {
-            height: 120px;
+            height: 170px;
+            /* Increased from 120px */
             background: none;
             box-shadow: none;
             border: none;
             align-self: flex-start;
             margin-top: 14px;
             margin-left: 40px;
-            max-width: 30vw;
+            max-width: 32vw;
             width: auto;
         }
 
@@ -80,7 +91,8 @@
             }
 
             .banner-logo {
-                height: 60px;
+                height: 90px;
+                /* Increased from 60px */
                 margin-top: 6px;
                 margin-left: 12px;
             }
@@ -100,7 +112,8 @@
 
         .map-blurb-row {
             display: flex;
-            flex-direction: row;
+            flex-direction: row-reverse;
+            /* Blurb on right, map on left */
             align-items: stretch;
             width: 100%;
             gap: 2vw;
@@ -304,6 +317,15 @@
             overflow-x: auto;
         }
 
+        /* Stack site-specific charts vertically on small screens */
+        @media (max-width: 900px) {
+            .site-grid {
+                flex-direction: column !important;
+                gap: 18px !important;
+                align-items: stretch !important;
+            }
+        }
+
         .miniChart {
             width: 100%;
             max-width: 400px;
@@ -364,13 +386,14 @@
     <div class="dashboard-row">
         <div class="main-content">
             <div class="map-blurb-row">
+                <div id="map"></div>
                 <div class="blurb-box">
                     <span class="blurb-label">Blurb</span>
                     <p>
-                        
+                        This is your blurb content. It will always be as tall as the map on large screens, and will
+                        appear above the map on very small screens.
                     </p>
                 </div>
-                <div id="map"></div>
             </div>
             <div class="controls">
                 <label for="range">Show data for: </label>
@@ -402,10 +425,8 @@
     <div id="charts">
         <div class="loading" id="loadingMessage">Loading all sites...</div>
     </div>
-    <!-- ... JavaScript unchanged ... -->
-    <!-- (Paste your JavaScript here, unchanged from previous versions) -->
+    <!-- JavaScript unchanged -->
     <script>
-        // ... (your JavaScript code here, unchanged) ...
         // SN to scientific name mapping
         const snToSci = {
             "z6-33252": "GF2501",
