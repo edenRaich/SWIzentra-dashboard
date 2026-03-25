@@ -24,7 +24,7 @@
             width: 100%;
             min-height: 110px;
             height: 180px;
-            background: url('TitleImage.png') center center/cover no-repeat;
+            background: url('./TitleImage.png') center center/cover no-repeat;
             display: flex;
             align-items: flex-start;
             justify-content: flex-start;
@@ -375,11 +375,34 @@
     <div class="dashboard-row">
         <div class="main-content">
             <div class="map-blurb-row">
-                <div id="map"></div>
-                <div class="blurb-box">
-                    <span class="blurb-label">Blurb</span>
-                </div>
-            </div>
+    <div id="map"></div>
+
+    <div class="blurb-box">
+        <span class="blurb-label">About the Project</span>
+        
+        <p style="margin: 0; line-height: 1.6; color: #000000; font-size: 1.125em;">
+       Landward movement of saltwater underground is increasingly common along low-elevation coastlines. 
+       This site features three shallow wells in Davis, NC that monitor water level, temperature, and 
+       conductivity (a proxy for salinity). The well loggers show real-time fluctuations in water 
+       table height and shallow groundwater salinity caused by tides and precipitation. 
+       These well observations complement the Downeast road flooding information available from the Sunny Day Flooding Project. If you have questions about this data please email dbarber@brynmawr.edu
+
+    </p>
+
+
+        <a href="https://sunnydayflooding.com/view-data/"
+           style="
+             color: #02590f;
+             font-weight: bold;
+             text-align: center;
+             margin-top: auto;
+             display: block;
+           ">
+            Click here for the Sunny Day Flooding Project
+        </a>
+    </div>
+</div>
+
             <div class="controls">
                 <label for="range">Show data for: </label>
                 <select id="range">
@@ -400,7 +423,7 @@
                     <canvas id="combined-level" class="combinedChart"></canvas>
                 </div>
                 <div style="display:flex;flex-direction:column;">
-                    <div class="chart-label">All Sites - Conductivity (mS/inch)</div>
+                    <div class="chart-label">All Sites - Conductivity (mS/cm)</div>
                     <canvas id="combined-ec" class="combinedChart"></canvas>
                 </div>
             </div>
@@ -420,7 +443,7 @@
         };
         // Sites list with your colors and scientific names
         const sites = [
-            { name: "Tidal Ditch", sn: "z6-32482", sci: snToSci["z6-32482"], lat: 34.7855122, lng: -76.4655264, color: "#1e3a8a" },
+            
             { name: "Murphy Cemetery", sn: "z6-33251", sci: snToSci["z6-33251"], lat: 34.789873, lng: -76.4655548, color: "#6b7280" },
             { name: "Ghost Forest", sn: "z6-33252", sci: snToSci["z6-33252"], lat: 34.7883175, lng: -76.4653989, color: "#10b981" },
             { name: "Styron Yard", sn: "z6-32414", sci: snToSci["z6-32414"], lat: 34.789731, lng: -76.4612296, color: "#f59e0b" }
@@ -437,28 +460,19 @@
                { key: "Water Temperature", aliases: ["Water Temperature"], type: "temp" },
             { key: "Conductivity", aliases: ["Conductivity", "EC"], type: "ec" }
         ];
-        function toFeet(value, unit) {
-            if (!unit) return value;
-            const u = unit.toLowerCase();
-            if (u.includes("meter")) return value * 3.28084;
-            if (u.includes("centimeter") || u === "cm") return value * 0.0328084;
-            if (u.includes("feet") || u === "foot" || u === "ft") return value;
-            return value;
+        
+        // Convert millimeters to feet (water level always comes in mm)
+        function toFeet(value) {
+            return value * 0.00328084;
         }
+        
         function toFahrenheit(value, unit) {
             if (!unit) return value;
             const u = unit.toLowerCase();
             if (u.startsWith("c")) return value * 9 / 5 + 32;
             return value;
         }
-        function toMsPerInch(value, unit) {
-            if (!unit) return value;
-            const u = unit.toLowerCase();
-            if (u.includes("ms/cm")) return value * 2.54;
-            if (u.includes("µs/cm") || u.includes("us/cm")) return (value / 1000) * 2.54;
-            if (u.includes("ms/inch")) return value;
-            return value;
-        }
+        
         function destroyCharts(chartArray) {
             chartArray.forEach(c => { try { c.destroy(); } catch (e) { } });
             chartArray.length = 0;
@@ -535,7 +549,7 @@
                 html += `
           <div class="sensor-chart-block">
             <div class="sensor-title">
-              ${sensor.type === "level" ? "Water Level (ft)" : sensor.type === "temp" ? "Water Temperature (°F)" : "Conductivity (mS/inch)"}
+             ${sensor.type === "level" ? "Water Level (ft)" : sensor.type === "temp" ? "Water Temperature (°C)" : "Conductivity (mS/cm)"}
             </div>
             <canvas id="${chartId}" class="miniChart"></canvas>
           </div>
@@ -552,14 +566,15 @@
                 if (readings.length === 0) return;
                 let values, label;
                 if (sensor.type === "level") {
-                    values = readings.map(r => toFeet(r.value, units));
+                    // Convert mm to feet
+                    values = readings.map(r => toFeet(r.value));
                     label = "Water Level (ft)";
                 } else if (sensor.type === "temp") {
                     values = readings.map(r => toFahrenheit(r.value, units));
-                    label = "Water Temperature (°F)";
+                    label = "Water Temperature (°C)";
                 } else {
-                    values = readings.map(r => toMsPerInch(r.value, units));
-                    label = "Conductivity (mS/inch)";
+                    values = readings.map(r => r.value);
+                    label = "Conductivity (mS/cm)";
                 }
                 const ctx = document.getElementById(`chart-${site.sn}-${sensor.type}`)?.getContext('2d');
                 if (!ctx) return;
@@ -607,7 +622,7 @@
                 perSiteChartInstances.push(chart);
             });
         }
-        function renderCombinedCharts() {
+        function renderCombinedChart() {
             destroyCharts(combinedChartInstances);
             const levelCtx = document.getElementById('combined-level').getContext('2d');
             const ecCtx = document.getElementById('combined-ec').getContext('2d');
@@ -623,9 +638,10 @@
                     const units = (device.data[lKey][0].metadata && device.data[lKey][0].metadata.units) || '';
                     readings = filterReadings(readings, range);
                     if (readings.length > 0) {
+                        // Convert mm to feet
                         levelDatasets.push({
                             label: site.name + " (" + site.sci + ")",
-                            data: readings.map(r => ({ x: r.datetime, y: toFeet(r.value, units) })),
+                            data: readings.map(r => ({ x: r.datetime, y: toFeet(r.value) })),
                             borderColor: site.color,
                             backgroundColor: site.color + "33",
                             borderWidth: 1,
@@ -640,10 +656,10 @@
                     let readings = device.data[eKey][0].readings || [];
                     const units = (device.data[eKey][0].metadata && device.data[eKey][0].metadata.units) || '';
                     readings = filterReadings(readings, range);
-                    if (readings.length > 0) {
+                   if (readings.length > 0) {
                         ecDatasets.push({
-                            label: site.name + " (" + site.sci + ")",
-                            data: readings.map(r => ({ x: r.datetime, y: toMsPerInch(r.value, units) })),
+                        label: site.name + " (" + site.sci + ")",
+                    data: readings.map(r => ({ x: r.datetime, y: r.value })),
                             borderColor: site.color,
                             backgroundColor: site.color + "33",
                             borderWidth: 1,
@@ -714,7 +730,7 @@
                         },
                         y: {
                             beginAtZero: false,
-                            title: { display: true, text: 'Conductivity (mS/inch)' }
+                            title: { display: true, text: 'Conductivity (mS/cm)' }
                         }
                     },
                     animation: false
@@ -724,12 +740,11 @@
         }
         function showApiError(message) {
             document.getElementById('loadingMessage').textContent = '';
-            document.getElementById('perSiteCharts').innerHTML = '';
-            document.getElementById('combinedCharts').innerHTML = `
+            document.getElementById('perSiteCharts').innerHTML = `
         <div class="error-message">
           ${message || 'Unable to load data from Zentra API (limit reached or network error).'}
         </div>`;
-        }
+}
         async function fetchDeviceFromProxy(sn, perPage, startDate) {
             const params = new URLSearchParams();
             params.set('device_sn', sn);
@@ -771,7 +786,7 @@
                 showApiError(e.message);
                 return;
             }
-            renderCombinedCharts();
+            renderCombinedChart();
             const ts = new Date().toLocaleString();
             document.getElementById('lastUpdated').textContent = `Data loaded: ${ts}`;
             if (lastSite) showPerSiteCharts(lastSite);
